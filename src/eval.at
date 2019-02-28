@@ -1,3 +1,6 @@
+fn @ x y is
+	tail fuse x y
+
 fn in x list is
 	if = null head list
 		false
@@ -85,5 +88,10 @@ fn eval tokens is
         litr head tokens
     + "Error: Unrecognised token " str head tokens
 
-fn main code is
-    eval words code
+fn repl is
+	@ print eval words input "> "
+      repl
+
+fn main is
+	@ print "Welcome to the Atto expression interpreter written purely in Atto."
+      repl

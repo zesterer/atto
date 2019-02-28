@@ -2,6 +2,8 @@ use std::{
     slice,
     collections::HashMap,
     io::{self, prelude::*},
+    env,
+    fs,
 };
 use rustyline::Editor;
 
@@ -24,7 +26,7 @@ enum Value {
 
 impl Value {
     pub fn from_str(s: &str) -> Option<Value> {
-        let s = s.trim();
+        let s = s.trim_matches('\n');
         if s == "null" {
             Some(Value::Null)
         } else if s == "true" {
@@ -189,7 +191,7 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
         Expr::Print(x) => print(eval(&x, funcs, args).into_string()),
         Expr::Str(x) => Value::Str(eval(&x, funcs, args).into_string()),
         Expr::Value(val) => val.clone(),
-        Expr::Local(idx) => args[*idx].clone(),
+        Expr::Local(idx) => args.get(*idx).cloned().unwrap_or(Value::Null),
     }
 }
 
@@ -350,7 +352,8 @@ fn lex(code: &str) -> Vec<Token> {
         .collect::<Vec<_>>()
 }
 
-fn main() {
+fn prompt() {
+    /*
     let code = include_str!("eval.at");
 
     let tokens = lex(code);
@@ -370,6 +373,9 @@ fn main() {
     );
 
     println!("Result: {:?}", result);
+    */
+
+    println!("Welcome to the Atto prompt.");
 
     let mut rl = Editor::<()>::new();
     while let Ok(line) = rl.readline(">> ") {
@@ -391,5 +397,35 @@ fn main() {
         }
             .map(|val| println!("{}", val.into_string()))
             .map_err(|err| print!("{:?}", err));
+    }
+}
+
+fn exec(fname: &str) {
+    let mut code = String::new();
+    match fs::File::open(fname) {
+        Ok(mut file) => { file.read_to_string(&mut code).unwrap(); },
+        Err(_) => println!("Could not open file '{}'", fname),
+    }
+
+    let _ = parse_funcs(lex(&code).iter()).map(|funcs| {
+        if let Some(main) = funcs.get("main") {
+            eval(&main.expr, &funcs, &mut vec![])
+        } else {
+            Value::Null
+        }
+    })
+        .map(|val| println!("{}", val.into_string()))
+        .map_err(|err| print!("{:?}", err));
+}
+
+fn usage() {
+    println!("Usage: atto [file]");
+}
+
+fn main() {
+    match &env::args().nth(1) {
+        None => prompt(),
+        Some(arg) if env::args().count() == 2 => exec(arg),
+        Some(_) => usage(),
     }
 }
