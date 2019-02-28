@@ -9,13 +9,13 @@ What do you get for this simplicity? Well... an insanely simple self-evaluating 
 
 Atto's design is painfully simple. There are two kinds of structure:
 
-Functions: `fn <name> [args] is`
+Functions: `fn <name> [args] is <expr>`
 
-Expressions: `<value> [values]`
+Expressions: `<literal> [expr]`
 
 That's it. Expressions, function calls, literals and operations are all considered to be the same thing.
-Function signatures must appear before they are first used, otherwise Atto literally can't know how many argument each function call has.
-Despite this fact, Atto is, somehow, Turing-complete and it's actually possible - if a little annoying - to write perfectly function (har har!) programs in it.
+Function signatures must appear before they are first used, otherwise Atto literally can't know how many arguments each function call has.
+Despite this fact, Atto is, somehow, fully Turing-complete and it's actually possible - if a little annoying - to write perfectly functional (har har!) programs in it.
 
 I leave you with a quick factorial calculation example demonstrating the compact expressiveness of Atto at work.
 
