@@ -3,7 +3,7 @@
 Atto is a ridiculously simple functional programming language for masochists.
 It features a syntax driven entirely by polish notation and no delimiters to speak of.
 If you make a mistake, your code will either be misinterpreted or will simply fail for no apparent reason.
-What do you get for this simplicity? Well... an insanely simple self-evaluating language.
+What do you get for this simplicity? Well... an insanely simple language with a ~250 line self-hosted interpreter.
 
 ## Design
 
@@ -27,9 +27,11 @@ Yes, that's it.
 
 ## Atto Interpreter Written In Atto
 
-In `examples/atto.at`, I've started working on an interpreter for Atto written in Atto.
-At the moment, it's only capable of evaluating expressions: no function declarations are permitted.
-In the future, I'd like to make it fully able to interpret Atto.
+In `examples/self-hosted.at`, I've written a fully-functioning REPL-based interpreter for Atto.
+It supports function declaration, function calling, and all of the evaluation operators that Atto does, including I/O.
+It has a minor issues, such as behaving unpredictably with invalid input. However, it should be able to successfully run any valid Atto program (provided your stack is big enough).
+
+Which reminds me: I need to use a non-recursive interpretation algorithm in the Rust interpreter. Also, tail-call optimisation would be nice.
 
 ## Tutorial
 

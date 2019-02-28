@@ -111,9 +111,8 @@ struct Func {
     expr: Expr,
 }
 
-fn print(msg: String) -> Value {
+fn print(msg: String) {
     println!("{}", msg);
-    Value::Null
 }
 
 fn input(msg: String) -> Value {
@@ -188,7 +187,11 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
             Value::Null
         },
         Expr::Input(x) => input(eval(&x, funcs, args).into_string()),
-        Expr::Print(x) => print(eval(&x, funcs, args).into_string()),
+        Expr::Print(x) => {
+            let val = eval(&x, funcs, args);
+            print(val.clone().into_string());
+            val
+        },
         Expr::Str(x) => Value::Str(eval(&x, funcs, args).into_string()),
         Expr::Value(val) => val.clone(),
         Expr::Local(idx) => args.get(*idx).cloned().unwrap_or(Value::Null),
@@ -264,7 +267,34 @@ fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &H
 
 fn parse_funcs(mut tokens: slice::Iter<Token>) -> Result<HashMap<String, Func>, Error> {
     let mut funcs = HashMap::new();
+
     let mut func_defs = HashMap::new();
+    tokens
+        .clone()
+        .scan((None, &mut func_defs), |(state, funcs), tok| {
+            match state {
+                Some((name, n)) => match tok {
+                    Token::Ident(i) => {
+                        if *n == 0 {
+                            *name = i.clone();
+                        }
+                        *n += 1;
+                    },
+                    Token::Is => {
+                        funcs.insert(name.clone(), *n - 1);
+                        *state = None;
+                    },
+                    _ => *n += 1,
+                },
+                None => match tok {
+                    Token::Fn => *state = Some((String::new(), 0usize)),
+                    _ => {},
+                },
+            }
+            Some(tok)
+        })
+        .for_each(|_| ());
+
     loop {
         match tokens.next() {
             Some(Token::Fn) => {},

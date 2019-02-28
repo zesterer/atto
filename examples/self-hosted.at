@@ -1,0 +1,278 @@
+fn # x y is
+	head pair y x
+fn @ x y is
+	head pair x y
+
+fn ignore x is null
+
+fn debugging_enabled is false
+
+fn debug x y is
+	# if debugging_enabled
+		print + "DEBUG[" + str x + "] = " str y
+		null
+	y
+
+fn wrap x is
+	tail pair null x
+
+fn empty is
+	tail tail pair null null
+
+fn skip n l is
+	if = 0 n
+		l
+	skip - n 1 tail l
+
+fn split x l is
+	if = x 0
+		pair empty l
+	pair fuse head l head split - x 1 tail l
+		 head tail split - x 1 tail l
+
+fn len l is
+	if = null tail l
+		1
+	if = empty l
+		0
+	if = empty tail l
+		1
+	+ 1 len tail l
+
+fn is_list x is
+	if = x str x
+		false
+	if = null tail x
+		false
+	true
+
+fn first x is
+	if is_list x
+		head x
+	x
+
+fn in x list is
+	if = null head list
+		false
+	if = x head list
+		true
+	in x tail list
+
+fn children token is
+    if = "if" token
+		3
+    if in token fuse "head" fuse "tail" fuse "pair" fuse "!" fuse "litr" fuse "str" fuse "words" fuse "input" "print"
+        1
+    if in token fuse "+" fuse "-" fuse "*" fuse "/" "in"
+        2
+	if ! = null litr token
+        0
+    + "Error: Unrecognised token " str token
+
+fn expr_len tokens args funcs is
+	if ! = null eval_arg head tokens args
+		1
+	if ! = null eval_func head tokens funcs
+		head tail eval_func head tokens funcs
+	if = 0 children head tokens
+        1
+    if = 1 children head tokens
+        expr_len tail tokens args funcs
+    if = 2 children head tokens
+        + expr_len tail tokens args funcs
+          skip expr_len tail tokens args funcs tail tokens
+	print + "Unrecognised expression head: " str head tokens
+
+fn nth_expr n expr args funcs is
+    if = n 0
+        expr
+    nth_expr - n 1 skip expr_len expr args funcs expr args funcs
+
+fn eval_arg name args is
+	if = null head args
+		null
+	if = name head head args
+		head tail head args
+	eval_arg name tail args
+
+fn eval_func name funcs is
+	if = null head funcs
+		null
+	if = name head head funcs
+		head funcs
+	eval_func name tail funcs
+
+fn eval_expr args funcs tokens is
+	if = null head tokens
+		null
+	if = "is" head tokens
+		eval_expr args funcs tail tokens
+    if = "if" head tokens
+        if eval_expr args funcs nth_expr 0 tail tokens args funcs
+            eval_expr args funcs nth_expr 1 tail tokens args funcs
+            eval_expr args funcs nth_expr 2 tail tokens args funcs
+    if = "head" head tokens
+        head eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "tail" head tokens
+        tail eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "fuse" head tokens
+        fuse eval_expr args funcs nth_expr 0 tail tokens args funcs
+			 eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "pair" head tokens
+        pair eval_expr args funcs nth_expr 0 tail tokens args funcs
+			 eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "litr" head tokens
+        litr eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "str" head tokens
+        str eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "words" head tokens
+        words eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "input" head tokens
+        input eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "print" head tokens
+        print eval_expr args funcs nth_expr 0 tail tokens args funcs
+	if = "!" head tokens
+        ! eval_expr args funcs nth_expr 0 tail tokens args funcs
+    if = "+" head tokens
+        + eval_expr args funcs nth_expr 0 tail tokens args funcs
+          eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "-" head tokens
+	    - eval_expr args funcs nth_expr 0 tail tokens args funcs
+          eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "*" head tokens
+        * eval_expr args funcs nth_expr 0 tail tokens args funcs
+          eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "/" head tokens
+        / eval_expr args funcs nth_expr 0 tail tokens args funcs
+          eval_expr args funcs nth_expr 1 tail tokens args funcs
+	if = "=" head tokens
+        = eval_expr args funcs nth_expr 0 tail tokens args funcs
+          eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if = "in" head tokens
+        in eval_expr args funcs nth_expr 0 tail tokens args funcs
+           eval_expr args funcs nth_expr 1 tail tokens args funcs
+    if ! = null litr head tokens
+        litr head tokens
+	if ! = null eval_arg head tokens args
+		eval_arg head tokens args
+	if ! = null eval_func head tokens funcs
+		eval_call
+			eval_func head tokens funcs
+			eval_n
+				head tail eval_func head tokens funcs
+				args
+				funcs
+				tail tokens
+			funcs
+	print + "Error: Unrecognised token " str head tokens
+
+fn make_args args params is
+	if = null args
+		empty
+	if = null params
+		empty
+	if = 0 len args
+		empty
+	fuse
+		wrap pair
+			head head args
+			head params
+		make_args
+			tail args
+			tail params
+
+fn eval_call f params funcs is
+	debug "call_result" eval_expr
+		debug "args" make_args
+			head skip 2 f
+			params
+		funcs
+		debug "tokens" skip 3 f
+
+fn eval_n n args funcs tokens is
+	if = n 0
+		empty
+	fuse
+		wrap eval_expr
+			args
+			funcs
+			tokens
+		eval_n
+			- n 1
+			args
+			funcs
+			nth_expr 1 tokens args funcs
+
+fn fuse_count x y is
+	pair
+		+ head x head y
+		fuse head tail x head tail y
+
+fn parse_args n funcs tokens is
+	if = null head tokens
+		null
+	if = "is" head tokens
+		pair 0
+			 empty
+	fuse_count
+		pair 1 head tokens
+		parse_args + n 1 funcs tail tokens
+
+fn parse_fn funcs tokens is
+	if = null head tokens
+		null
+	if = "fn" head tokens
+		parse_fn funcs tail tokens
+	fuse wrap head tokens
+	fuse parse_args 0 funcs tail tokens
+		skip
+			len head tail parse_args 0 funcs tail tokens
+			tail tokens
+
+fn parse_fns funcs tokens is
+	if = null head tokens
+		funcs
+	if = "fn" head tokens
+		fuse
+			parse_fns funcs tail tokens
+			wrap parse_fn funcs tokens
+	parse_fns funcs tail tokens
+
+fn get_fn name funcs is
+	if = null head head funcs
+		null
+	if = name head head funcs
+		head funcs
+	get_fn name tail funcs
+
+fn eval_fn f args funcs is
+	eval_expr args funcs skip 3 f
+
+fn try_eval_fn name args funcs is
+	if = null get_fn name funcs
+		null
+	eval_fn
+		get_fn name funcs
+		args
+		funcs
+
+fn main is
+	@ try_eval_fn
+		"main"
+		wrap pair "foo" 15
+		parse_fns empty words
+			@ input "> "
+			"
+				fn # x y is
+					head tail pair x y
+				fn add x y is
+					+ x y
+				fn sub x y is
+					- x y
+				fn main is
+					* 8 add 5 sub 6 3
+			"
+	ignore eval_arg "baz"
+		fuse wrap pair "foo" 5
+		fuse wrap pair "bar" 3
+		     wrap pair "baz" 9
