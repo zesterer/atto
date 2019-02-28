@@ -25,7 +25,13 @@ fn f is if = n 0 1 * n f - n 1
 
 Yes, that's it.
 
-## Syntax
+## Atto Interpreter Written In Atto
+
+In `examples/atto.at`, I've started working on an interpreter for Atto written in Atto.
+At the moment, it's only capable of evaluating expressions: no function declarations are permitted.
+In the future, I'd like to make it fully able to interpret Atto.
+
+## Tutorial
 
 Basic numeric operators:
 
@@ -151,98 +157,4 @@ fn main is
 	size fuse 1 fuse 2 3
 
 # Yields 3
-```
-
-Source code for my current implementation of the expression evaluator, in Atto:
-
-```
-fn in x list is
-	if = null head list
-		false
-	if = x head list
-		true
-	in x tail list
-
-fn children token is
-    if = "if" token
-		3
-    if in token fuse "head" fuse "tail" fuse "pair" fuse "!" fuse "litr" fuse "str" fuse "words" fuse "input" "print"
-        1
-    if in token fuse "+" fuse "-" fuse "*" fuse "/" "in"
-        2
-	if ! = null litr token
-        0
-    + "Error: Unrecognised token " str token
-
-fn skip n expr is
-    if = n 0
-        expr
-	skip - n 1 tail expr
-
-fn expr_len tokens is
-    if = 0 children head tokens
-        1
-    if = 1 children head tokens
-        expr_len tail tokens
-    if = 2 children head tokens
-        + expr_len tail tokens
-          skip expr_len tail tokens tail tokens
-    + "Unrecognised expression head: " str head tokens
-
-fn nth_expr n expr is
-    if = n 0
-        expr
-    nth_expr - n 1 skip expr_len expr expr
-
-fn eval tokens is
-    if = "if" head tokens
-        if eval nth_expr 0 tail tokens
-            eval nth_expr 1 tail tokens
-            eval nth_expr 2 tail tokens
-    if = "head" head tokens
-        head eval nth_expr 0 tail tokens
-    if = "tail" head tokens
-        tail eval nth_expr 0 tail tokens
-    if = "fuse" head tokens
-        fuse eval nth_expr 0 tail tokens
-			 eval nth_expr 1 tail tokens
-    if = "pair" head tokens
-        pair eval nth_expr 0 tail tokens
-			 eval nth_expr 1 tail tokens
-    if = "litr" head tokens
-        litr eval nth_expr 0 tail tokens
-    if = "str" head tokens
-        str eval nth_expr 0 tail tokens
-    if = "words" head tokens
-        words eval nth_expr 0 tail tokens
-    if = "input" head tokens
-        input eval nth_expr 0 tail tokens
-    if = "print" head tokens
-        print eval nth_expr 0 tail tokens
-	if = "!" head tokens
-        ! eval nth_expr 0 tail tokens
-    if = "+" head tokens
-        + eval nth_expr 0 tail tokens
-          eval nth_expr 1 tail tokens
-    if = "-" head tokens
-	    - eval nth_expr 0 tail tokens
-          eval nth_expr 1 tail tokens
-    if = "*" head tokens
-        * eval nth_expr 0 tail tokens
-          eval nth_expr 1 tail tokens
-    if = "/" head tokens
-        / eval nth_expr 0 tail tokens
-          eval nth_expr 1 tail tokens
-	if = "=" head tokens
-        = eval nth_expr 0 tail tokens
-          eval nth_expr 1 tail tokens
-    if = "in" head tokens
-        in eval nth_expr 0 tail tokens
-           eval nth_expr 1 tail tokens
-    if ! = null litr head tokens
-        litr head tokens
-    + "Error: Unrecognised token " str head tokens
-
-fn main code is
-    eval words code
 ```
