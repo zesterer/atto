@@ -5,6 +5,26 @@ It features a syntax driven entirely by reverse polish notation and no delimiter
 If you make a mistake, your code will either be misinterpreted or will simply fail for no apparent reason.
 What do you get for this simplicity? Well... an insanely simple self-evaluating language.
 
+## Design
+
+Atto's design is painfully simple. There are two kinds of structure:
+
+Functions: `fn <name> [args] is`
+
+Expressions: `<value> [values]`
+
+That's it. Expressions, function calls, literals and operations are all considered to be the same thing.
+Function signatures must appear before they are first used, otherwise Atto literally can't know how many argument each function call has.
+Despite this fact, Atto is, somehow, Turing-complete and it's actually possible - if a little annoying - to write perfectly function (har har!) programs in it.
+
+I leave you with a quick factorial calculation example demonstrating the compact expressiveness of Atto at work.
+
+```
+fn f is if = n 0 1 * n f - n 1
+```
+
+Yes, that's it.
+
 ## Syntax
 
 Basic numeric operators...
