@@ -1,7 +1,9 @@
 use std::{
     slice,
     collections::HashMap,
+    io::{self, prelude::*},
 };
+use rustyline::Editor;
 
 #[derive(Debug)]
 enum Error {
@@ -44,7 +46,17 @@ impl Value {
             Value::Num(x) => format!("{}", x),
             Value::Str(s) => s,
             Value::Bool(b) => format!("{}", b),
-            Value::List(_) => "<list>".to_string(),
+            Value::List(l) => {
+                let mut s = String::from("[");
+                for i in 0..l.len() {
+                    if i != 0 {
+                        s += ", ";
+                    }
+                    s += &format!("{}", l[i].clone().into_string());
+                }
+                s += "]";
+                s
+            },
             Value::Null => "null".to_string(),
         }
     }
@@ -54,9 +66,9 @@ impl Value {
 enum Token {
     Fn, Is,
 
-    In,   If,   Head, Tail,
-    Fuse, Pair, Litr, Str,
-    Words,
+    In,    If,    Head, Tail,
+    Fuse,  Pair,  Litr, Str,
+    Words, Input, Print,
 
     Not, Eq, Add, Sub, Mul, Div,
 
@@ -75,6 +87,8 @@ enum Expr {
     Litr(Box<Expr>),
     Str(Box<Expr>),
     Words(Box<Expr>),
+    Input(Box<Expr>),
+    Print(Box<Expr>),
 
     Not(Box<Expr>),
     Eq(Box<Expr>, Box<Expr>),
@@ -92,6 +106,21 @@ enum Expr {
 struct Func {
     args: Vec<String>,
     expr: Expr,
+}
+
+fn print(msg: String) -> Value {
+    println!("{}", msg);
+    Value::Null
+}
+
+fn input(msg: String) -> Value {
+    print!("{}", msg);
+    io::stdout().lock().flush().unwrap();
+
+    let mut input = String::new();
+    io::stdin().lock().read_to_string(&mut input).unwrap();
+    input = input.replace('\n', "");
+    Value::from_str(&input).unwrap_or(Value::Null)
 }
 
 fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value {
@@ -159,10 +188,11 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
         } else {
             Value::Null
         },
+        Expr::Input(x) => input(if let Value::Str(s) = eval(&x, funcs, args) { s } else { "".to_string() }),
+        Expr::Print(x) => print(if let Value::Str(s) = eval(&x, funcs, args) { s } else { "".to_string() }),
         Expr::Str(x) => Value::Str(eval(&x, funcs, args).into_string()),
         Expr::Value(val) => val.clone(),
         Expr::Local(idx) => args[*idx].clone(),
-        expr => panic!("Expr: {:?}", expr),
     }
 }
 
@@ -190,6 +220,8 @@ fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &H
         Token::Litr => Expr::Litr(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Str => Expr::Str(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Words => Expr::Words(Box::new(parse_expr(tokens, args, func_defs)?)),
+        Token::Input => Expr::Input(Box::new(parse_expr(tokens, args, func_defs)?)),
+        Token::Print => Expr::Print(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Value(v) => Expr::Value(v.clone()),
 
         Token::Not => Expr::Not(Box::new(parse_expr(tokens, args, func_defs)?)),
@@ -241,10 +273,7 @@ fn parse_funcs(mut tokens: slice::Iter<Token>) -> Result<HashMap<String, Func>, 
     loop {
         match tokens.next() {
             Some(Token::Fn) => {},
-            t => {
-                println!("Found {:?}", t);
-                return Ok(funcs)
-            },
+            _ => return Ok(funcs),
         }
 
         let name = match tokens.next() {
@@ -275,6 +304,7 @@ fn parse_funcs(mut tokens: slice::Iter<Token>) -> Result<HashMap<String, Func>, 
 fn words(s: &str) -> Vec<String> {
     s
         .chars()
+        .chain(Some(' '))
         .scan((false, String::new()), |(in_str, buf), c| {
             match c {
                 '"' /*"*/ => if *in_str {
@@ -296,10 +326,8 @@ fn words(s: &str) -> Vec<String> {
         .collect()
 }
 
-fn main() {
-    let code = include_str!("eval.at");
-
-    let tokens = words(code)
+fn lex(code: &str) -> Vec<Token> {
+    words(code)
         .into_iter()
         .map(|s| match s.as_str() {
             "fn" => Token::Fn,
@@ -313,6 +341,8 @@ fn main() {
             "litr" => Token::Litr,
             "str" => Token::Str,
             "words" => Token::Words,
+            "input" => Token::Input,
+            "print" => Token::Print,
             "=" => Token::Eq,
             "+" => Token::Add,
             "-" => Token::Sub,
@@ -325,7 +355,14 @@ fn main() {
                 Token::Ident(s.to_string())
             }
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+}
+
+fn main() {
+    /*
+    let code = include_str!("eval.at");
+
+    let tokens = lex(code);
 
     let funcs = parse_funcs(tokens.iter()).unwrap();
 
@@ -342,4 +379,27 @@ fn main() {
     );
 
     println!("Result: {:?}", result);
+    */
+
+    let mut rl = Editor::<()>::new();
+    while let Ok(line) = rl.readline(">> ") {
+        rl.add_history_entry(line.as_ref());
+
+        let _ = {
+            let tokens = lex(&line);
+
+            parse_funcs(tokens.iter()).map(|funcs| {
+                if let Some(main) = funcs.get("main") {
+                    eval(&main.expr, &funcs, &mut vec![])
+                } else {
+                    Value::Null
+                }
+            })
+            .and_then(|_| parse_expr(&mut tokens.iter(), &vec![], &HashMap::new()).map(|expr| {
+                eval(&expr, &HashMap::new(), &mut vec![])
+            }))
+        }
+            .map(|val| println!("{}", val.into_string()))
+            .map_err(|err| print!("{:?}", err));
+    }
 }

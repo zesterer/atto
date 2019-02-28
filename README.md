@@ -27,7 +27,7 @@ Yes, that's it.
 
 ## Syntax
 
-Basic numeric operators...
+Basic numeric operators:
 
 ```
 fn main is
@@ -43,7 +43,7 @@ fn main is
 # Yields 4
 ```
 
-Pairing values together into a two-component list
+Pairing values together into a two-component list:
 
 ```
 fn main is
@@ -52,7 +52,7 @@ fn main is
 # Yields [3, 17]
 ```
 
-Fusing lists together
+Fusing lists together:
 
 ```
 fn main is
@@ -61,7 +61,7 @@ fn main is
 # Yields [3, 17, 5, 8]
 ```
 
-Conditional expression that return the second operand if the first evaluates to true, and the third operand if no
+Conditional expression that returns the second operand if the first evaluates to true, and the third operand if not:
 
 ```
 fn main is
@@ -72,7 +72,7 @@ fn main is
 # Yields 10
 ```
 
-Selecting the first value in a list
+Selecting the first value in a list:
 
 ```
 fn main is
@@ -81,7 +81,7 @@ fn main is
 # Yields 3
 ```
 
-Selecting values trailing after the head of a list
+Selecting values trailing after the head of a list:
 
 ```
 fn main is
@@ -90,7 +90,7 @@ fn main is
 # Yields [17, 9]
 ```
 
-Converting a string into a value
+Converting a string into a value:
 
 ```
 fn main is
@@ -113,7 +113,7 @@ fn main is
 # Yields 4
 ```
 
-Determining whether an item exists within a list
+Determining whether an item exists within a list:
 
 ```
 fn main is
@@ -122,7 +122,7 @@ fn main is
 # Yields true
 ```
 
-Defining a function with parameters
+Defining a function with parameters:
 
 ```
 fn add x y is
@@ -133,11 +133,11 @@ fn main is
 # Yields 8
 ```
 
-Recursion to find the size of a list
+Recursion to find the size of a list:
 
 ```
 fn size l is
-	if = null tail
+	if = null head
 		0
 		+ 1 size tail l
 fn main is
