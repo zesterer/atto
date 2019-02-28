@@ -153,15 +153,15 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
             (Value::Num(x), Value::Num(y)) => Value::Num(x / y),
             _ => Value::Null,
         },
-        Expr::Head(list) => if let Value::List(items) = eval(&list, funcs, args) {
-            items.first().cloned().unwrap_or(Value::Null)
-        } else {
-            Value::Null
+        Expr::Head(list) => match eval(&list, funcs, args) {
+            Value::List(items) => items.first().cloned().unwrap_or(Value::Null),
+            Value::Str(s) => s.get(0..1).map(|s| Value::Str(s.to_string())).unwrap_or(Value::Null),
+            _ => Value::Null,
         },
-        Expr::Tail(list) => if let Value::List(items) = eval(&list, funcs, args) {
-            items.get(1..).map(|items| Value::List(items.iter().cloned().collect())).unwrap_or(Value::Null)
-        } else {
-            Value::Null
+        Expr::Tail(list) => match eval(&list, funcs, args) {
+            Value::List(items) => items.get(1..).map(|items| Value::List(items.iter().cloned().collect())).unwrap_or(Value::Null),
+            Value::Str(s) => s.get(1..).map(|s| if s.len() == 0 { Value::Null } else { Value::Str(s.to_string()) }).unwrap_or(Value::Null),
+            _ => Value::Null,
         },
         Expr::Fuse(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
             (Value::List(mut x), Value::List(mut y)) => Value::List({ x.append(&mut y); x }),
