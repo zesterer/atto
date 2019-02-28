@@ -1,7 +1,7 @@
 # Atto
 
 Atto is a ridiculously simple functional programming language for masochists.
-It features a syntax driven entirely by reverse polish notation and no delimiters to speak of.
+It features a syntax driven entirely by polish notation and no delimiters to speak of.
 If you make a mistake, your code will either be misinterpreted or will simply fail for no apparent reason.
 What do you get for this simplicity? Well... an insanely simple self-evaluating language.
 
@@ -126,7 +126,7 @@ fn main is
 fn main is
 	= null litr "null"
 
-# Yields 4
+# Yields true
 ```
 
 Defining a function with parameters:
