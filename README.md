@@ -43,6 +43,22 @@ fn main is
 # Yields 4
 ```
 
+Printing values to the console:
+
+```
+fn main is
+	print "Hello, world!"
+```
+
+Receiving inputs from the user and converting them to a value:
+
+```
+fn main is
+    print
+    	* litr input "second: "
+          litr input "first: "
+```
+
 Pairing values together into a two-component list:
 
 ```

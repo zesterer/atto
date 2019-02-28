@@ -24,6 +24,7 @@ enum Value {
 
 impl Value {
     pub fn from_str(s: &str) -> Option<Value> {
+        let s = s.trim();
         if s == "null" {
             Some(Value::Null)
         } else if s == "true" {
@@ -115,12 +116,12 @@ fn print(msg: String) -> Value {
 
 fn input(msg: String) -> Value {
     print!("{}", msg);
-    io::stdout().lock().flush().unwrap();
+    io::stdout().flush().unwrap();
 
     let mut input = String::new();
-    io::stdin().lock().read_to_string(&mut input).unwrap();
+    io::stdin().read_line(&mut input).unwrap();
     input = input.replace('\n', "");
-    Value::from_str(&input).unwrap_or(Value::Null)
+    Value::Str(input)
 }
 
 fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value {
@@ -188,8 +189,8 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
         } else {
             Value::Null
         },
-        Expr::Input(x) => input(if let Value::Str(s) = eval(&x, funcs, args) { s } else { "".to_string() }),
-        Expr::Print(x) => print(if let Value::Str(s) = eval(&x, funcs, args) { s } else { "".to_string() }),
+        Expr::Input(x) => input(eval(&x, funcs, args).into_string()),
+        Expr::Print(x) => print(eval(&x, funcs, args).into_string()),
         Expr::Str(x) => Value::Str(eval(&x, funcs, args).into_string()),
         Expr::Value(val) => val.clone(),
         Expr::Local(idx) => args[*idx].clone(),
