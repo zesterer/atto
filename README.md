@@ -129,15 +129,6 @@ fn main is
 # Yields 4
 ```
 
-Determining whether an item exists within a list:
-
-```
-fn main is
-	in 3 fuse 1 fuse 2 fuse 3 4
-
-# Yields true
-```
-
 Defining a function with parameters:
 
 ```
@@ -165,10 +156,17 @@ fn main is
 Source code for my current implementation of the expression evaluator, in Atto:
 
 ```
+fn in x list is
+	if = null head list
+		false
+	if = x head list
+		true
+	in x tail list
+
 fn children token is
     if = "if" token
 		3
-    if in token fuse "head" fuse "tail" fuse "pair" "size"
+    if in token fuse "head" fuse "tail" fuse "pair" fuse "!" fuse "litr" fuse "str" fuse "words" fuse "input" "print"
         1
     if in token fuse "+" fuse "-" fuse "*" fuse "/" "in"
         2
@@ -211,14 +209,16 @@ fn eval tokens is
     if = "pair" head tokens
         pair eval nth_expr 0 tail tokens
 			 eval nth_expr 1 tail tokens
-    if = "size" head tokens
-        size eval nth_expr 0 tail tokens
     if = "litr" head tokens
         litr eval nth_expr 0 tail tokens
     if = "str" head tokens
         str eval nth_expr 0 tail tokens
     if = "words" head tokens
         words eval nth_expr 0 tail tokens
+    if = "input" head tokens
+        input eval nth_expr 0 tail tokens
+    if = "print" head tokens
+        print eval nth_expr 0 tail tokens
 	if = "!" head tokens
         ! eval nth_expr 0 tail tokens
     if = "+" head tokens

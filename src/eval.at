@@ -1,3 +1,10 @@
+fn in x list is
+	if = null head list
+		false
+	if = x head list
+		true
+	in x tail list
+
 fn children token is
     if = "if" token
 		3

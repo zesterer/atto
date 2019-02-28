@@ -67,9 +67,10 @@ impl Value {
 enum Token {
     Fn, Is,
 
-    In,    If,    Head, Tail,
-    Fuse,  Pair,  Litr, Str,
-    Words, Input, Print,
+    If,   Head,  Tail,
+    Fuse, Pair,  Litr,
+    Str,  Words, Input,
+    Print,
 
     Not, Eq, Add, Sub, Mul, Div,
 
@@ -80,7 +81,6 @@ enum Token {
 #[derive(Debug)]
 enum Expr {
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    In(Box<Expr>, Box<Expr>),
     Head(Box<Expr>),
     Tail(Box<Expr>),
     Fuse(Box<Expr>, Box<Expr>),
@@ -130,10 +130,6 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
             eval(&good, funcs, args)
         } else {
             eval(&bad, funcs, args)
-        },
-        Expr::In(expr, list) => match eval(&list, funcs, args) {
-            Value::List(items) => Value::Bool(items.contains(&eval(&expr, funcs, args))),
-            _ => Value::Null
         },
         Expr::Not(x) => match eval(&x, funcs, args) {
             Value::Bool(b) => Value::Bool(!b),
@@ -201,10 +197,6 @@ fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &H
     Ok(match tokens.next().ok_or(Error::ExpectedToken)? {
         Token::If => Expr::If(
             Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
-        ),
-        Token::In => Expr::In(
             Box::new(parse_expr(tokens, args, func_defs)?),
             Box::new(parse_expr(tokens, args, func_defs)?),
         ),
@@ -333,7 +325,6 @@ fn lex(code: &str) -> Vec<Token> {
         .map(|s| match s.as_str() {
             "fn" => Token::Fn,
             "is" => Token::Is,
-            "in" => Token::In,
             "if" => Token::If,
             "head" => Token::Head,
             "tail" => Token::Tail,
@@ -360,7 +351,6 @@ fn lex(code: &str) -> Vec<Token> {
 }
 
 fn main() {
-    /*
     let code = include_str!("eval.at");
 
     let tokens = lex(code);
@@ -380,7 +370,6 @@ fn main() {
     );
 
     println!("Result: {:?}", result);
-    */
 
     let mut rl = Editor::<()>::new();
     while let Ok(line) = rl.readline(">> ") {
