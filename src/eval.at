@@ -1,0 +1,80 @@
+fn children token is
+    if = "if" token
+		3
+    if in token fuse "head" fuse "tail" fuse "pair" "size"
+        1
+    if in token fuse "+" fuse "-" fuse "*" fuse "/" "in"
+        2
+	if ! = null litr token
+        0
+    + "Error: Unrecognised token " str token
+
+fn skip n expr is
+    if = n 0
+        expr
+	skip - n 1 tail expr
+
+fn expr_len tokens is
+    if = 0 children head tokens
+        1
+    if = 1 children head tokens
+        expr_len tail tokens
+    if = 2 children head tokens
+        + expr_len tail tokens
+          skip expr_len tail tokens tail tokens
+    + "Unrecognised expression head: " str head tokens
+
+fn nth_expr n expr is
+    if = n 0
+        expr
+    nth_expr - n 1 skip expr_len expr expr
+
+fn eval tokens is
+    if = "if" head tokens
+        if eval nth_expr 0 tail tokens
+            eval nth_expr 1 tail tokens
+            eval nth_expr 2 tail tokens
+    if = "head" head tokens
+        head eval nth_expr 0 tail tokens
+    if = "tail" head tokens
+        tail eval nth_expr 0 tail tokens
+    if = "fuse" head tokens
+        fuse eval nth_expr 0 tail tokens
+			 eval nth_expr 1 tail tokens
+    if = "pair" head tokens
+        pair eval nth_expr 0 tail tokens
+			 eval nth_expr 1 tail tokens
+    if = "size" head tokens
+        size eval nth_expr 0 tail tokens
+    if = "litr" head tokens
+        litr eval nth_expr 0 tail tokens
+    if = "str" head tokens
+        str eval nth_expr 0 tail tokens
+    if = "words" head tokens
+        words eval nth_expr 0 tail tokens
+	if = "!" head tokens
+        ! eval nth_expr 0 tail tokens
+    if = "+" head tokens
+        + eval nth_expr 0 tail tokens
+          eval nth_expr 1 tail tokens
+    if = "-" head tokens
+	    - eval nth_expr 0 tail tokens
+          eval nth_expr 1 tail tokens
+    if = "*" head tokens
+        * eval nth_expr 0 tail tokens
+          eval nth_expr 1 tail tokens
+    if = "/" head tokens
+        / eval nth_expr 0 tail tokens
+          eval nth_expr 1 tail tokens
+	if = "=" head tokens
+        = eval nth_expr 0 tail tokens
+          eval nth_expr 1 tail tokens
+    if = "in" head tokens
+        in eval nth_expr 0 tail tokens
+           eval nth_expr 1 tail tokens
+    if ! = null litr head tokens
+        litr head tokens
+    + "Error: Unrecognised token " str head tokens
+
+fn main code is
+    eval words code
