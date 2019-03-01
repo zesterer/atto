@@ -74,7 +74,10 @@ enum Token {
     Str,  Words, Input,
     Print,
 
-    Not, Eq, Add, Sub, Mul, Div,
+    Add,  Neg,
+    Mul, Div, Rem,
+    Eq,
+    Less, LessEq,
 
     Value(Value),
     Ident(String),
@@ -93,12 +96,14 @@ enum Expr {
     Input(Box<Expr>),
     Print(Box<Expr>),
 
-    Not(Box<Expr>),
     Eq(Box<Expr>, Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    Sub(Box<Expr>, Box<Expr>),
+    Neg(Box<Expr>),
     Mul(Box<Expr>, Box<Expr>),
     Div(Box<Expr>, Box<Expr>),
+    Rem(Box<Expr>, Box<Expr>),
+    Less(Box<Expr>, Box<Expr>),
+    LessEq(Box<Expr>, Box<Expr>),
 
     Value(Value),
     Call(String, Vec<Expr>),
@@ -132,18 +137,14 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
         } else {
             eval(&bad, funcs, args)
         },
-        Expr::Not(x) => match eval(&x, funcs, args) {
-            Value::Bool(b) => Value::Bool(!b),
-            _ => Value::Null,
-        },
         Expr::Eq(x, y) => Value::Bool(eval(&x, funcs, args) == eval(&y, funcs, args)),
         Expr::Add(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
             (Value::Num(x), Value::Num(y)) => Value::Num(x + y),
             (Value::Str(x), Value::Str(y)) => Value::Str(x + &y),
             _ => Value::Null,
         },
-        Expr::Sub(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
-            (Value::Num(x), Value::Num(y)) => Value::Num(x - y),
+        Expr::Neg(x) => match eval(&x, funcs, args) {
+            Value::Num(x) => Value::Num(-x),
             _ => Value::Null,
         },
         Expr::Mul(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
@@ -154,10 +155,24 @@ fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value 
             (Value::Num(x), Value::Num(y)) => Value::Num(x / y),
             _ => Value::Null,
         },
+        Expr::Rem(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+            (Value::Num(x), Value::Num(y)) => Value::Num(x % y),
+            _ => Value::Null,
+        },
+        Expr::Less(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+            (Value::Num(x), Value::Num(y)) => Value::Bool(x < y),
+            (Value::Str(x), Value::Str(y)) => Value::Bool(x < y),
+            _ => Value::Null,
+        },
+        Expr::LessEq(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+            (Value::Num(x), Value::Num(y)) => Value::Bool(x <= y),
+            (Value::Str(x), Value::Str(y)) => Value::Bool(x <= y),
+            _ => Value::Null,
+        },
         Expr::Head(list) => match eval(&list, funcs, args) {
             Value::List(items) => items.first().cloned().unwrap_or(Value::Null),
             Value::Str(s) => s.get(0..1).map(|s| Value::Str(s.to_string())).unwrap_or(Value::Null),
-            _ => Value::Null,
+            val => val,
         },
         Expr::Tail(list) => match eval(&list, funcs, args) {
             Value::List(items) => items.get(1..).map(|items| Value::List(items.iter().cloned().collect())).unwrap_or(Value::Null),
@@ -222,7 +237,6 @@ fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &H
         Token::Print => Expr::Print(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Value(v) => Expr::Value(v.clone()),
 
-        Token::Not => Expr::Not(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Eq => Expr::Eq(
             Box::new(parse_expr(tokens, args, func_defs)?),
             Box::new(parse_expr(tokens, args, func_defs)?),
@@ -231,15 +245,24 @@ fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &H
             Box::new(parse_expr(tokens, args, func_defs)?),
             Box::new(parse_expr(tokens, args, func_defs)?),
         ),
-        Token::Sub => Expr::Sub(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
-        ),
+        Token::Neg => Expr::Neg(Box::new(parse_expr(tokens, args, func_defs)?)),
         Token::Mul => Expr::Mul(
             Box::new(parse_expr(tokens, args, func_defs)?),
             Box::new(parse_expr(tokens, args, func_defs)?),
         ),
         Token::Div => Expr::Div(
+            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs)?),
+        ),
+        Token::Rem => Expr::Rem(
+            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs)?),
+        ),
+        Token::Less => Expr::Less(
+            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs)?),
+        ),
+        Token::LessEq => Expr::LessEq(
             Box::new(parse_expr(tokens, args, func_defs)?),
             Box::new(parse_expr(tokens, args, func_defs)?),
         ),
@@ -358,21 +381,23 @@ fn lex(code: &str) -> Vec<Token> {
             "fn" => Token::Fn,
             "is" => Token::Is,
             "if" => Token::If,
-            "head" => Token::Head,
-            "tail" => Token::Tail,
-            "fuse" => Token::Fuse,
-            "pair" => Token::Pair,
-            "litr" => Token::Litr,
-            "str" => Token::Str,
-            "words" => Token::Words,
-            "input" => Token::Input,
-            "print" => Token::Print,
-            "=" => Token::Eq,
-            "+" => Token::Add,
-            "-" => Token::Sub,
-            "*" => Token::Mul,
-            "/" => Token::Div,
-            "!" => Token::Not,
+            "__head" => Token::Head,
+            "__tail" => Token::Tail,
+            "__fuse" => Token::Fuse,
+            "__pair" => Token::Pair,
+            "__litr" => Token::Litr,
+            "__str" => Token::Str,
+            "__words" => Token::Words,
+            "__input" => Token::Input,
+            "__print" => Token::Print,
+            "__eq" => Token::Eq,
+            "__add" => Token::Add,
+            "__neg" => Token::Neg,
+            "__mul" => Token::Mul,
+            "__div" => Token::Div,
+            "__rem" => Token::Rem,
+            "__less" => Token::Less,
+            "__lesseq" => Token::LessEq,
             s => if let Some(v) = Value::from_str(s) {
                 Token::Value(v)
             } else {
@@ -380,6 +405,10 @@ fn lex(code: &str) -> Vec<Token> {
             }
         })
         .collect::<Vec<_>>()
+}
+
+fn with_core(code: &str) -> String {
+    String::from(include_str!("atto/core.at")) + code
 }
 
 fn prompt() {
@@ -406,13 +435,14 @@ fn prompt() {
     */
 
     println!("Welcome to the Atto prompt.");
+    println!("The core library is included by default.");
 
     let mut rl = Editor::<()>::new();
     while let Ok(line) = rl.readline(">> ") {
         rl.add_history_entry(line.as_ref());
 
         let _ = {
-            let tokens = lex(&line);
+            let tokens = lex(&with_core(&line));
 
             parse_funcs(tokens.iter()).map(|funcs| {
                 if let Some(main) = funcs.get("main") {
@@ -437,7 +467,7 @@ fn exec(fname: &str) {
         Err(_) => println!("Could not open file '{}'", fname),
     }
 
-    let _ = parse_funcs(lex(&code).iter()).map(|funcs| {
+    let _ = parse_funcs(lex(&with_core(&code)).iter()).map(|funcs| {
         if let Some(main) = funcs.get("main") {
             eval(&main.expr, &funcs, &mut vec![])
         } else {

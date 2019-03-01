@@ -1,0 +1,26 @@
+fn # x y is
+	head pair y x
+fn @ x y is
+	head pair x y
+
+fn fact n is
+	if = 0 n
+		1
+	* n fact - n 1
+
+fn print_facts n is
+	@ if = 0 n
+		null
+		print_facts - n 1
+	print + "fact(" + str n + ") = " str fact n
+
+fn count_to n is
+	if = n 0
+		print "Finished!"
+	count_to - n 1
+
+fn main is
+	# print "Factorials:"
+	# print_facts 10
+	# count_to 1000
+	null

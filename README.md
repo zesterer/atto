@@ -1,9 +1,12 @@
 # Atto
 
-Atto is a ridiculously simple functional programming language for masochists.
+Atto is an insanely simple functional programming language.
 It features a syntax driven entirely by polish notation and no delimiters to speak of.
-If you make a mistake, your code will either be misinterpreted or will simply fail for no apparent reason.
+If you make a mistake, your code may either be misinterpreted or may simply fail to run. If you're lucky, you get a vague error.
 What do you get for this simplicity? Well... an insanely simple language with a ~250 line self-hosted interpreter.
+
+Despite these obvious design limits, it's actually possible to write quite pleasing code in Atto.
+It's possible to explain its syntax with relative ease too.
 
 ## Design
 
@@ -14,13 +17,16 @@ Functions: `fn <name> [args] is <expr>`
 Expressions: `<literal> [expr]`
 
 That's it. Expressions, function calls, literals and operations are all considered to be the same thing.
-Function signatures must appear before they are first used, otherwise Atto literally can't know how many arguments each function call has.
+Later definitions of functions will override earlier definitions *for the entire program*.
 Despite this fact, Atto is, somehow, fully Turing-complete and it's actually possible - if a little annoying - to write perfectly functional (har har!) programs in it.
 
 I leave you with a quick factorial calculation example demonstrating the compact expressiveness of Atto at work.
 
 ```
-fn f is if = n 0 1 * n f - n 1
+fn f is
+    if = n 0
+	    1
+	* n f - n 1
 ```
 
 Yes, that's it.
@@ -32,6 +38,34 @@ It supports function declaration, function calling, and all of the evaluation op
 It has a minor issues, such as behaving unpredictably with invalid input. However, it should be able to successfully run any valid Atto program (provided your stack is big enough).
 
 Which reminds me: I need to use a non-recursive interpretation algorithm in the Rust interpreter. Also, tail-call optimisation would be nice.
+
+## Core Library
+
+Atto comes with a 'core' library. It provides a series of non-intrinsic functions and utilities that are themselves written in Atto.
+In addition, it provides all of the operators common to Atto usage.
+
+- `# x y`: Ignore the first value, evaluate to only the second (useful for comments)
+- `@ x y`: Ignore the second value, evaluate to only the first
+- `! x`: Negate a boolean
+- `wrap x`: Wrap a value in a list
+- `empty`: Produces the empty list
+- `debug_enabled`: Can be overriden to enable debugging utilities
+- `debug i x`: Display the value of `x` with the information tag `x`
+- `asset i x`: Assert that `x` is true
+- `asset_eq x y`: Assert that `x` and `y` are equivalent
+- `is_atom x`: Determine whether a value is atomic (i.e: null, bool or a number)
+- `is_str x`: Determine whether a value is a string
+- `is_list x`: Determine whether `x` is a list
+- `is_bool x`: Determine whether `x` is a bool
+- `is_num x`: Determine whether `x` is a number
+- `is_null x`: Determine whether `x` is null
+- `len l`: Determine the length of a list
+- `skip n l`: Skip the first `n` values in a list
+- `nth n l`: Get the `n`th item in a list
+- `in x l`: Determine whether `x` is in a list
+- `split i l`: Split a list into two separate lists at the `i`th index
+
+You can check `src/atto/core.at` for full documentation about what `core` provides.
 
 ## Tutorial
 

@@ -1,0 +1,201 @@
+fn = x y is
+	__eq x y
+
+fn + x y is
+	__add x y
+
+fn - x y is
+	__add x __neg y
+
+fn neg x is
+	__neg x
+
+fn * x y is
+	__mul x y
+
+fn / x y is
+	__div x y
+
+fn % x y is
+	__rem x y
+
+fn ! x is
+	if = true x
+		false
+	if = false x
+		true
+	x
+
+fn or x y is
+	if = true x
+		true
+	if = true y
+		true
+	false
+
+fn and x y is
+	if = true x
+		if = true y
+			true
+		false
+	false
+
+fn head x is
+	__head x
+
+fn tail x is
+	__tail x
+
+fn fuse x y is
+	__fuse x y
+
+fn pair x y is
+	__pair x y
+
+fn litr x is
+	__litr x
+
+fn str x is
+	__str x
+
+fn words x is
+	__words x
+
+fn input x is
+	__input x
+
+fn print x is
+	__print x
+
+fn # x y is
+	head pair y x
+
+fn @ x y is
+	# "Evaluate to only the first argument"
+	# y x
+
+fn ! x is
+	# "Negate a boolean value"
+	if = true x
+		false
+	if = false x
+		true
+	x
+
+fn wrap x is
+	# "Wrap a value in a list"
+	tail pair null x
+
+fn empty is
+	# "Produce the empty list"
+	tail wrap null
+
+fn debug_enabled is
+	# "Whether debugging output should occur"
+	false
+
+fn debug info x is
+	# "Describing the value while returning it."
+	if debug_enabled
+		# print + "DEBUG [" + str x + "]: " str x
+		x
+	x
+
+fn assert info x is
+	# "Output a warning if the value is not true"
+	if debug_enabled
+		if = true x
+			true
+		# print + "ASSERTION FAILED [" + str info + "]: " str x
+		false
+	true
+
+fn assert_eq x y is
+	# "Output a warning if the values are not equal"
+	if debug_enabled
+		if = x y
+			true
+		# print + "ASSERTION FAILED [" + str x + " != " + str y "]"
+		false
+	true
+
+fn is_atom x is
+	# "Determine whether a value is not list-like"
+	if = x head x
+		true
+	false
+
+fn is_str x is
+	# "Determine whether a value is a string"
+	= x str x
+
+fn is_list x is
+	# "Determine whether a value is a list"
+	if is_str x
+		false
+	if is_atom x
+		false
+	true
+
+fn is_bool x is
+	# "Determine whether a value is a bool"
+	if = true x
+		true
+	if = false x
+		true
+	false
+
+fn is_null x is
+	# "Determine whether a value is null"
+	if = null x
+		true
+	false
+
+fn if_num x is
+	# "Determine whether a value is a number"
+	if = 0 * x 0
+		true
+	false
+
+fn len l is
+	# "Find the length of a list or string"
+	if is_atom l
+		1
+	if = empty l
+		0
+	+ 1 len tail l
+
+fn skip n l is
+	# "Find the nth tail of a list"
+	if is_atom l
+		l
+	if = 0 n
+		l
+	skip - n 1 tail l
+
+fn nth n l is
+	# "Find the nth value of a list or string"
+	if is_atom l
+		l
+	if = 0 n
+		head l
+	nth - n 1 tail l
+
+fn in x l is
+	# "Determine whether a value exists within a list"
+	if ! is_list l
+		false
+	if = empty l
+		false
+	if = x head l
+		true
+	in x tail l
+
+fn split x l is
+	# "Split a list into two sublists at the given index"
+	if = empty l
+		empty
+	if = x 0
+		pair empty l
+	pair fuse head l head split - x 1 tail l
+		 head tail split - x 1 tail l
