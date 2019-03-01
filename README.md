@@ -51,8 +51,8 @@ In addition, it provides all of the operators common to Atto usage.
 - `empty`: Produces the empty list
 - `debug_enabled`: Can be overriden to enable debugging utilities
 - `debug i x`: Display the value of `x` with the information tag `x`
-- `asset i x`: Assert that `x` is true
-- `asset_eq x y`: Assert that `x` and `y` are equivalent
+- `assert i x`: Assert that `x` is true
+- `assert_eq x y`: Assert that `x` and `y` are equivalent
 - `is_atom x`: Determine whether a value is atomic (i.e: null, bool or a number)
 - `is_str x`: Determine whether a value is a string
 - `is_list x`: Determine whether `x` is a list
