@@ -1,16 +1,16 @@
 # Atto
 
 Atto is an insanely simple functional programming language.
-It features a syntax driven entirely by polish notation and no delimiters to speak of.
-If you make a mistake, your code may either be misinterpreted or may simply fail to run. If you're lucky, you get a vague error.
-What do you get for this simplicity? Well... an insanely simple language with a ~250 line self-hosted interpreter.
+It features a syntax driven entirely by polish notation and no delimiters to speak of (it ignores all non-separating whitespace).
+What do you get for this simplicity? Well... an insanely simple language with a ~250 line self-hosted interpreter (it could probably be made smaller though).
 
 Despite these obvious design limits, it's actually possible to write quite pleasing code in Atto.
-It's possible to explain its syntax with relative ease too.
+That, combined with the extraordinarily extendable syntax (you can define your own operators, or overload those defined in the `core` library) make it
+ideal for solving a whole class of programming problems that are normally awkward to solve in more imperative languages.
 
 ## Design
 
-Atto's design is painfully simple. There are two kinds of structure:
+Atto's design is stupidly simple. There are two kinds of structure:
 
 Functions: `fn <name> [args] is <expr>`
 
@@ -18,12 +18,13 @@ Expressions: `<literal> [expr]`
 
 That's it. Expressions, function calls, literals and operations are all considered to be the same thing.
 Later definitions of functions will override earlier definitions *for the entire program*.
-Despite this fact, Atto is, somehow, fully Turing-complete and it's actually possible - if a little annoying - to write perfectly functional (har har!) programs in it.
+Despite this fact, Atto is, somehow, fully Turing-complete and it's actually possible - if a little annoying - to write perfectly functional (ha ha!)
+programs in it.
 
 I leave you with a quick factorial calculation example demonstrating the compact expressiveness of Atto at work.
 
 ```
-fn f is
+fn f n is
     if = n 0
 	    1
 	* n f - n 1
@@ -69,120 +70,135 @@ You can check `src/atto/core.at` for full documentation about what `core` provid
 
 ## Tutorial
 
-Basic numeric operators:
+### Basic numeric operators:
 
 ```
 fn main is
 	+ 5 7
-
-# Yields 12
 ```
+
+Yields: `12`
 
 ```
 fn main is
 	- * 3 3 5
-
-# Yields 4
 ```
 
-Printing values to the console:
+Yields: `4`
+
+### Printing values to the console:
 
 ```
 fn main is
 	print "Hello, world!"
 ```
 
-Receiving inputs from the user and converting them to a value:
+```
+fn main is
+	print str 1337
+```
+
+### Receiving inputs from the user and converting them to a value:
 
 ```
 fn main is
-    print
+    print + "Product = " str
     	* litr input "second: "
           litr input "first: "
 ```
 
-Pairing values together into a two-component list:
+### Pairing values together into a two-component list:
 
 ```
 fn main is
 	pair 3 17
-
-# Yields [3, 17]
 ```
 
-Fusing lists together:
+Yields `[3, 17]`
+
+### Fusing lists together:
 
 ```
 fn main is
 	fuse pair 3 17 pair 5 8
-
-# Yields [3, 17, 5, 8]
 ```
 
-Conditional expression that returns the second operand if the first evaluates to true, and the third operand if not:
+Yields: `[3, 17, 5, 8]`
+
+### Conditional expressions:
 
 ```
 fn main is
 	if true
 		10
 		5
-
-# Yields 10
 ```
 
-Selecting the first value in a list:
+Yields: `10`
+
+```
+fn main is
+	if false
+		10
+		5
+```
+
+Yields: `5`
+
+### Selecting the first value in a list:
 
 ```
 fn main is
 	head pair 3 17
-
-# Yields 3
 ```
 
-Selecting values trailing after the head of a list:
+Yields: `3`
+
+### Selecting values trailing after the head of a list:
 
 ```
 fn main is
 	tail fuse 3 fuse 17 9
-
-# Yields [17, 9]
 ```
 
-Converting a string into a value:
+Yields: `[17, 9]`
+
+### Converting a string into a value:
 
 ```
 fn main is
 	- 7 litr "3"
-
-# Yields 4
 ```
+
+Yields: `4`
 
 ```
 fn main is
-	= true litr "false"
-
-# Yields false
+	+ 7 litr "8.5"
 ```
+
+Yields: `15.5`
 
 ```
 fn main is
 	= null litr "null"
-
-# Yields true
 ```
 
-Defining a function with parameters:
+Yields: `true`
+
+### Defining a function with parameters:
 
 ```
 fn add x y is
 	+ x y
+
 fn main is
 	add 5 3
-
-# Yields 8
 ```
 
-Recursion to find the size of a list:
+Yields: `8`
+
+### Recursion to find the size of a list:
 
 ```
 fn size l is
@@ -191,6 +207,24 @@ fn size l is
 		+ 1 size tail l
 fn main is
 	size fuse 1 fuse 2 3
-
-# Yields 3
 ```
+
+Yields: `3`
+
+## Optimisation
+
+Currently, Atto's Rust interpreter performs virtually no optimisations. Despite that, I'll attempt to talk below about some ideas I've had that seem promising.
+
+Atto's design does not permit the realiasing of values within a function, nor does it permit mutation. This, and the fact that the syntax is incredibly
+quick to parse, makes it an extremely good potential target for a lot of optimisations. Inlining, constant propagation, CSE detection and tail call
+optimisations are naturally easy to implement on top of Atto's design.
+
+The lack of realiasing also means that Atto has an affine type system *by design*, without ever requiring compiler
+support for move semantic analysis or anything like that.
+
+The only real obstacles to some really impressive optimisation is its dynamic type system. However,
+in a significant number of cases it's likely that types can be inferred at compile-time with specialized machine code emitted for each function depending on
+the types passed to it.
+
+I'm also working on ideas for a statically-typed version of Atto. However, I've yet to settle on a design that is sufficiently simple as to compliment the
+current design.
