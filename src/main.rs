@@ -474,7 +474,6 @@ fn exec(fname: &str) {
             Value::Null
         }
     })
-        .map(|val| println!("{}", val.into_string()))
         .map_err(|err| print!("{:?}", err));
 }
 

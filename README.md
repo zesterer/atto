@@ -1,10 +1,11 @@
 # Atto
 
 Atto is an insanely simple functional programming language.
-It features a syntax driven entirely by polish notation and no delimiters to speak of (it ignores all non-separating whitespace).
-What do you get for this simplicity? Well... an insanely simple language with a ~250 line self-hosted interpreter (it could probably be made smaller though).
 
-Despite these obvious design limits, it's actually possible to write quite pleasing code in Atto.
+It features a syntax driven entirely by polish notation and no delimiters to speak of (it ignores all non-separating whitespace).
+What do you get for this simplicity? Well... an insanely simple language with a ~200 line self-hosted interpreter.
+
+Despite these design limitations, it's actually possible to write quite pleasing code in Atto.
 That, combined with the extraordinarily extendable syntax (you can define your own operators, or overload those defined in the `core` library) make it
 ideal for solving a whole class of programming problems that are normally awkward to solve in more imperative languages.
 
@@ -17,17 +18,14 @@ Functions: `fn <name> [args] is <expr>`
 Expressions: `<literal> [expr]`
 
 That's it. Expressions, function calls, literals and operations are all considered to be the same thing.
-Later definitions of functions will override earlier definitions *for the entire program*.
-Despite this fact, Atto is, somehow, fully Turing-complete and it's actually possible - if a little annoying - to write perfectly functional (ha ha!)
-programs in it.
 
 I leave you with a quick factorial calculation example demonstrating the compact expressiveness of Atto at work.
 
 ```
 fn f n is
-    if = n 0
-	    1
-	* n f - n 1
+  if = n 0
+    1
+  * n f - n 1
 ```
 
 Yes, that's it.
@@ -42,8 +40,9 @@ Which reminds me: I need to use a non-recursive interpretation algorithm in the 
 
 ## Core Library
 
-Atto comes with a 'core' library. It provides a series of non-intrinsic functions and utilities that are themselves written in Atto.
+Atto comes with a `core` library. It provides a series of non-intrinsic functions and utilities that are themselves written in Atto.
 In addition, it provides all of the operators common to Atto usage.
+The Atto interpreter implicitly inserts the `core` library above whatever you run, similar in nature to C's `#include`.
 
 - `# x y`: Ignore the first value, evaluate to only the second (useful for comments)
 - `@ x y`: Ignore the second value, evaluate to only the first

@@ -1,0 +1,10 @@
+fn rev_str l is
+	if = 1 len l
+		l
+	+
+		rev_str tail l
+		head l
+
+fn main is
+	@ print rev_str input "What text do you want reversed? "
+	main

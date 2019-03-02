@@ -1,17 +1,12 @@
-fn # x y is
-	head pair y x
-fn @ x y is
-	head pair x y
-
-fn fact n is
+fn factorial n is
 	if = 0 n
 		1
-	* n fact - n 1
+	* n factorial - n 1
 
-fn print_facts n is
+fn print_factorials n is
 	@ if = 0 n
 		null
-		print_facts - n 1
+		print_factorials - n 1
 	print + "fact(" + str n + ") = " str fact n
 
 fn count_to n is
@@ -21,6 +16,6 @@ fn count_to n is
 
 fn main is
 	# print "Factorials:"
-	# print_facts 10
+	# print_factorials 10
 	# count_to 1000
 	null

@@ -97,7 +97,7 @@ fn debug_enabled is
 fn debug info x is
 	# "Describing the value while returning it."
 	if debug_enabled
-		# print + "DEBUG [" + str x + "]: " str x
+		# print + "DEBUG [" + str info + "]: " str x
 		x
 	x
 

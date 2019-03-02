@@ -11,23 +11,30 @@ fn TOWN_ID is 1
 fn town is
 	fuse TOWN_ID
 	fuse "You find yourself at a circle of abandoned houses. Downhill, towards the sea to the south, there is a beach. Towards the east, a harbour."
-	fuse wrap fuse "south" fuse BEACH_ID
-		      fuse "east" HARBOUR_ID
-		empty
+	fuse wrap
+			fuse "south"
+			fuse BEACH_ID
+			fuse "east"
+			     HARBOUR_ID
+		 empty
 
 fn HARBOUR_ID is 2
 fn harbour is
 	fuse HARBOUR_ID
 	fuse "You find yourself at a small harbour. There is a single boat moored there. Towards the west, there is a town."
 	fuse wrap pair "west" TOWN_ID
-		empty
+	     empty
 
 fn gen_map is
+	# "Generate the static map data. Used on start. Produces a list of locations."
+	# "Each location looks like this: [ID, DESCRIPTION, [COMMAND, TARGET, ...]]"
+	# "Each command/target pair determine a valid place to go to e.g: 'north' and '0' (the ID of the beach)"
 	fuse wrap beach
 	fuse wrap town
 		 wrap harbour
 
 fn get_desc loc map is
+	# "Return the description of a given location, if it exists"
 	if = empty map
 		"I don't know where you are!"
 	if = loc head head map
@@ -35,6 +42,7 @@ fn get_desc loc map is
 	get_desc loc tail map
 
 fn get_target dir default targets is
+	# "Given a directional command, return the new location ID if it exists in the current list of location targets. If not, return the default"
 	if = empty targets
 		# print "I don't understand! Perhaps try a compass direction?"
 		default
@@ -43,6 +51,9 @@ fn get_target dir default targets is
 	get_target dir default tail targets
 
 fn parse_cmd loc cmd map is
+	# "Take a user command and changes the location if appropriate"
+	# "Will return the new location"
+
 	if = empty map
 		loc
 	if = loc head head map
@@ -53,6 +64,7 @@ fn parse_cmd loc cmd map is
 	parse_cmd loc cmd tail map
 
 fn game_loop loc map is
+	# "Keep describing location, asking for a user command, recursive"
 	# print get_desc loc map
 	game_loop
 		parse_cmd
@@ -62,4 +74,5 @@ fn game_loop loc map is
 		map
 
 fn main is
+	# "Generate the static map data and get running the game!"
 	game_loop BEACH_ID gen_map
