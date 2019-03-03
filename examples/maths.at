@@ -7,7 +7,7 @@ fn print_factorials n is
 	@ if = 0 n
 		null
 		print_factorials - n 1
-	print + "fact(" + str n + ") = " str fact n
+	print + "fact(" + str n + ") = " str factorial n
 
 fn count_to n is
 	if = n 0
