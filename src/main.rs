@@ -11,6 +11,7 @@ use rustyline::Editor;
 enum Error {
     Expected(Token),
     ExpectedToken,
+    ExpectedIdent,
     Unexpected(Token),
     CannotFind(String),
 }
@@ -69,10 +70,12 @@ impl Value {
 enum Token {
     Fn, Is,
 
-    If,   Head,  Tail,
-    Fuse, Pair,  Litr,
-    Str,  Words, Input,
-    Print,
+    If,   Let,
+    Head,  Tail,
+    Fuse, Pair,
+    Litr, Str,
+    Words,
+    Input, Print,
 
     Add,  Neg,
     Mul, Div, Rem,
@@ -86,6 +89,7 @@ enum Token {
 #[derive(Debug)]
 enum Expr {
     If(Box<Expr>, Box<Expr>, Box<Expr>),
+    Let(String, Box<Expr>, Box<Expr>),
     Head(Box<Expr>),
     Tail(Box<Expr>),
     Fuse(Box<Expr>, Box<Expr>),
@@ -107,7 +111,8 @@ enum Expr {
 
     Value(Value),
     Call(String, Vec<Expr>),
-    Local(usize),
+    Arg(usize),
+    Local(String),
 }
 
 #[derive(Debug)]
@@ -130,154 +135,180 @@ fn input(msg: String) -> Value {
     Value::Str(input)
 }
 
-fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>) -> Value {
+fn eval(expr: &Expr, funcs: &HashMap<String, Func>, args: &Vec<Value>, locals: &HashMap<String, Value>) -> Value {
     match expr {
-        Expr::If(pred, good, bad) => if eval(&pred, funcs, args) == Value::Bool(true) {
-            eval(&good, funcs, args)
+        Expr::If(pred, good, bad) => if eval(&pred, funcs, args, locals) == Value::Bool(true) {
+            eval(&good, funcs, args, locals)
         } else {
-            eval(&bad, funcs, args)
+            eval(&bad, funcs, args, locals)
         },
-        Expr::Eq(x, y) => Value::Bool(eval(&x, funcs, args) == eval(&y, funcs, args)),
-        Expr::Add(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Let(name, expr, next) => {
+            let val = eval(&expr, funcs, args, locals);
+            let mut locals = locals.clone();
+            locals.insert(name.clone(), val);
+            eval(&next, funcs, args, &locals)
+        },
+        Expr::Eq(x, y) => Value::Bool(eval(&x, funcs, args, locals) == eval(&y, funcs, args, locals)),
+        Expr::Add(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Num(x + y),
             (Value::Str(x), Value::Str(y)) => Value::Str(x + &y),
             _ => Value::Null,
         },
-        Expr::Neg(x) => match eval(&x, funcs, args) {
+        Expr::Neg(x) => match eval(&x, funcs, args, locals) {
             Value::Num(x) => Value::Num(-x),
             _ => Value::Null,
         },
-        Expr::Mul(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Mul(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Num(x * y),
             _ => Value::Null,
         },
-        Expr::Div(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Div(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Num(x / y),
             _ => Value::Null,
         },
-        Expr::Rem(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Rem(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Num(x % y),
             _ => Value::Null,
         },
-        Expr::Less(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Less(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Bool(x < y),
             (Value::Str(x), Value::Str(y)) => Value::Bool(x < y),
             _ => Value::Null,
         },
-        Expr::LessEq(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::LessEq(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::Num(x), Value::Num(y)) => Value::Bool(x <= y),
             (Value::Str(x), Value::Str(y)) => Value::Bool(x <= y),
             _ => Value::Null,
         },
-        Expr::Head(list) => match eval(&list, funcs, args) {
+        Expr::Head(list) => match eval(&list, funcs, args, locals) {
             Value::List(items) => items.first().cloned().unwrap_or(Value::Null),
             Value::Str(s) => s.get(0..1).map(|s| Value::Str(s.to_string())).unwrap_or(Value::Null),
             val => val,
         },
-        Expr::Tail(list) => match eval(&list, funcs, args) {
+        Expr::Tail(list) => match eval(&list, funcs, args, locals) {
             Value::List(items) => items.get(1..).map(|items| Value::List(items.iter().cloned().collect())).unwrap_or(Value::Null),
             Value::Str(s) => s.get(1..).map(|s| if s.len() == 0 { Value::Null } else { Value::Str(s.to_string()) }).unwrap_or(Value::Null),
             _ => Value::Null,
         },
-        Expr::Fuse(x, y) => match (eval(&x, funcs, args), eval(&y, funcs, args)) {
+        Expr::Fuse(x, y) => match (eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)) {
             (Value::List(mut x), Value::List(mut y)) => Value::List({ x.append(&mut y); x }),
             (Value::List(mut x), y) => Value::List({ x.push(y); x }),
             (x, Value::List(mut y)) => Value::List({ let mut v = vec![x]; v.append(&mut y); v }),
             (x, y) => Value::List(vec![x, y]),
         },
-        Expr::Pair(x, y) => Value::List(vec![eval(&x, funcs, args), eval(&y, funcs, args)]),
+        Expr::Pair(x, y) => Value::List(vec![eval(&x, funcs, args, locals), eval(&y, funcs, args, locals)]),
         Expr::Call(f, params) => if let Some(f) = funcs.get(f) {
-            eval(&f.expr, funcs, &params.iter().map(|p| eval(&p, funcs, args)).collect())
+            eval(&f.expr, funcs, &params.iter().map(|p| eval(&p, funcs, args, locals)).collect(), &HashMap::new())
         } else {
             Value::Null
         },
-        Expr::Words(x) => if let Value::Str(s) = eval(&x, funcs, args) {
+        Expr::Words(x) => if let Value::Str(s) = eval(&x, funcs, args, locals) {
             Value::List(words(&s).into_iter().map(|s| Value::Str(s)).collect())
         } else {
             Value::Null
         },
-        Expr::Litr(x) => if let Value::Str(s) = eval(&x, funcs, args) {
+        Expr::Litr(x) => if let Value::Str(s) = eval(&x, funcs, args, locals) {
             Value::from_str(&s).unwrap_or(Value::Null)
         } else {
             Value::Null
         },
-        Expr::Input(x) => input(eval(&x, funcs, args).into_string()),
+        Expr::Input(x) => input(eval(&x, funcs, args, locals).into_string()),
         Expr::Print(x) => {
-            let val = eval(&x, funcs, args);
+            let val = eval(&x, funcs, args, locals);
             print(val.clone().into_string());
             val
         },
-        Expr::Str(x) => Value::Str(eval(&x, funcs, args).into_string()),
+        Expr::Str(x) => Value::Str(eval(&x, funcs, args, locals).into_string()),
         Expr::Value(val) => val.clone(),
-        Expr::Local(idx) => args.get(*idx).cloned().unwrap_or(Value::Null),
+        Expr::Arg(idx) => args.get(*idx).cloned().unwrap_or(Value::Null),
+        Expr::Local(name) => locals.get(name).cloned().unwrap_or(Value::Null),
     }
 }
 
-fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &HashMap<String, usize>) -> Result<Expr, Error> {
+fn parse_expr(tokens: &mut slice::Iter<Token>, args: &Vec<String>, func_defs: &HashMap<String, usize>, locals: &Vec<String>) -> Result<Expr, Error> {
     Ok(match tokens.next().ok_or(Error::ExpectedToken)? {
         Token::If => Expr::If(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
-        Token::Head => Expr::Head(Box::new(parse_expr(tokens, args, func_defs)?)),
-        Token::Tail => Expr::Tail(Box::new(parse_expr(tokens, args, func_defs)?)),
+        Token::Let => {
+            if let Token::Ident(name) = tokens.next().ok_or(Error::ExpectedIdent)? {
+                let expr = Box::new(parse_expr(tokens, args, func_defs, locals)?);
+                let mut locals = locals.clone();
+                locals.push(name.clone());
+                Expr::Let(
+                    name.clone(),
+                    expr,
+                    Box::new(parse_expr(tokens, args, func_defs, &locals)?),
+                )
+            } else {
+                return Err(Error::ExpectedIdent);
+            }
+        },
+        Token::Head => Expr::Head(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
+        Token::Tail => Expr::Tail(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
         Token::Fuse => Expr::Fuse(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::Pair => Expr::Pair(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
-        Token::Litr => Expr::Litr(Box::new(parse_expr(tokens, args, func_defs)?)),
-        Token::Str => Expr::Str(Box::new(parse_expr(tokens, args, func_defs)?)),
-        Token::Words => Expr::Words(Box::new(parse_expr(tokens, args, func_defs)?)),
-        Token::Input => Expr::Input(Box::new(parse_expr(tokens, args, func_defs)?)),
-        Token::Print => Expr::Print(Box::new(parse_expr(tokens, args, func_defs)?)),
+        Token::Litr => Expr::Litr(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
+        Token::Str => Expr::Str(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
+        Token::Words => Expr::Words(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
+        Token::Input => Expr::Input(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
+        Token::Print => Expr::Print(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
         Token::Value(v) => Expr::Value(v.clone()),
 
         Token::Eq => Expr::Eq(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::Add => Expr::Add(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
-        Token::Neg => Expr::Neg(Box::new(parse_expr(tokens, args, func_defs)?)),
+        Token::Neg => Expr::Neg(Box::new(parse_expr(tokens, args, func_defs, locals)?)),
         Token::Mul => Expr::Mul(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::Div => Expr::Div(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::Rem => Expr::Rem(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::Less => Expr::Less(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
         Token::LessEq => Expr::LessEq(
-            Box::new(parse_expr(tokens, args, func_defs)?),
-            Box::new(parse_expr(tokens, args, func_defs)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
+            Box::new(parse_expr(tokens, args, func_defs, locals)?),
         ),
 
         Token::Ident(i) => {
-            if let Some((idx, _)) = args
+            if let Some(local) = locals
+                .iter()
+                .find(|local| &i == local)
+            {
+                Expr::Local(local.clone())
+            } else if let Some((idx, _)) = args
                 .iter()
                 .enumerate()
                 .find(|(_, arg)| &i == arg)
             {
-                Expr::Local(idx)
+                Expr::Arg(idx)
             } else if let Some(f_args) = func_defs.get(i.as_str()) {
                 let mut params = vec![];
                 for _ in 0..*f_args {
-                    params.push(parse_expr(tokens, args, func_defs)?);
+                    params.push(parse_expr(tokens, args, func_defs, locals)?);
                 }
                 Expr::Call(i.clone(), params)
             } else {
@@ -340,7 +371,7 @@ fn parse_funcs(mut tokens: slice::Iter<Token>) -> Result<HashMap<String, Func>, 
 
         func_defs.insert(name.clone(), args.len());
 
-        let expr = parse_expr(&mut tokens, &args, &func_defs)?;
+        let expr = parse_expr(&mut tokens, &args, &func_defs, &Vec::new())?;
 
         funcs.insert(name, Func {
             args,
@@ -381,6 +412,7 @@ fn lex(code: &str) -> Vec<Token> {
             "fn" => Token::Fn,
             "is" => Token::Is,
             "if" => Token::If,
+            "let" => Token::Let,
             "__head" => Token::Head,
             "__tail" => Token::Tail,
             "__fuse" => Token::Fuse,
@@ -446,13 +478,13 @@ fn prompt() {
 
             parse_funcs(tokens.iter()).map(|funcs| {
                 if let Some(main) = funcs.get("main") {
-                    eval(&main.expr, &funcs, &mut vec![])
+                    eval(&main.expr, &funcs, &mut Vec::new(), &HashMap::new())
                 } else {
                     Value::Null
                 }
             })
-            .and_then(|_| parse_expr(&mut tokens.iter(), &vec![], &HashMap::new()).map(|expr| {
-                eval(&expr, &HashMap::new(), &mut vec![])
+            .and_then(|_| parse_expr(&mut tokens.iter(), &vec![], &HashMap::new(), &Vec::new()).map(|expr| {
+                eval(&expr, &HashMap::new(), &mut Vec::new(), &HashMap::new())
             }))
         }
             .map(|val| println!("{}", val.into_string()))
@@ -469,7 +501,7 @@ fn exec(fname: &str) {
 
     let _ = parse_funcs(lex(&with_core(&code)).iter()).map(|funcs| {
         if let Some(main) = funcs.get("main") {
-            eval(&main.expr, &funcs, &mut vec![])
+            eval(&main.expr, &funcs, &mut Vec::new(), &HashMap::new())
         } else {
             Value::Null
         }

@@ -73,6 +73,15 @@ fn print x is
 fn # x y is
 	head pair y x
 
+fn [ items t is
+    fuse wrap items t
+
+fn , x y is
+    fuse wrap x y
+
+fn ] is
+    empty
+
 fn @ x y is
 	# y x
 
