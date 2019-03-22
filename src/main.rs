@@ -381,28 +381,52 @@ fn parse_funcs(mut tokens: slice::Iter<Token>) -> Result<HashMap<String, Func>, 
 }
 
 fn words(s: &str) -> Vec<String> {
+    enum State {
+        Default,
+        String(String, bool),
+        Other(String),
+    }
+
+    fn is_singular(c: char) -> bool {
+        match c {
+            '(' | ')' | '[' | ']' | '{' | '}' | ',' | ';' => true,
+            _ => false,
+        }
+    }
+
+    let mut state = State::Default;
+    let mut words = Vec::new();
     s
         .chars()
         .chain(Some(' '))
-        .scan((false, String::new()), |(in_str, buf), c| {
-            match c {
-                '"' /*"*/ => if *in_str {
-                    *in_str = false;
-                } else {
-                    buf.push('"' /*"*/);
-                    *in_str = true;
+        .for_each(|c| {
+            match &mut state {
+                State::Default => match c {
+                    '"' /*"*/ => state = State::String(String::from("\""), false),
+                    c if is_singular(c) => words.push(c.to_string()),
+                    c if c.is_whitespace() => {},
+                    c => state = State::Other(c.to_string()),
                 },
-                c if c.is_whitespace() && !*in_str => {
-                    let s = buf.clone();
-                    buf.clear();
-                    return Some(s);
+                State::String(text, escaped) => match c {
+                    '"' /*"*/ => {
+                        words.push(text.clone());
+                        state = State::Default;
+                    },
+                    c => text.push(c),
                 },
-                c => buf.push(c),
+                State::Other(text) => match c {
+                    c if c.is_whitespace() || is_singular(c) => {
+                        words.push(text.clone());
+                        if is_singular(c) {
+                            words.push(c.to_string());
+                        }
+                        state = State::Default;
+                    },
+                    c => text.push(c),
+                },
             }
-            Some("".to_string())
-        })
-        .filter(|s| s.len() > 0)
-        .collect()
+        });
+    words
 }
 
 fn lex(code: &str) -> Vec<Token> {

@@ -79,6 +79,30 @@ fn , x y is
 fn ] is
     empty
 
+fn ( expr ) is
+	expr
+
+fn ) is
+	null
+
+fn { expr } is
+	expr
+
+fn ; expr is
+	expr
+
+fn } is
+	null
+
+fn else expr is
+	expr
+
+fn return is
+	null
+
+fn := expr is
+	expr
+
 fn @ x y is
 	# "Evaluate to only the first argument"
 	# y x
