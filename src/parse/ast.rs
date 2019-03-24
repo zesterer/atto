@@ -35,10 +35,10 @@ pub enum Builtin {
 
     Eq(Box<Expr>, Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
+    Sub(Box<Expr>, Box<Expr>),
     Mul(Box<Expr>, Box<Expr>),
     Div(Box<Expr>, Box<Expr>),
     Rem(Box<Expr>, Box<Expr>),
     Less(Box<Expr>, Box<Expr>),
     LessEq(Box<Expr>, Box<Expr>),
-    Neg(Box<Expr>),
 }
