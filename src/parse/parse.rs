@@ -79,13 +79,13 @@ mod tests {
             def add |x y|
                 + x y
 
-            def foo |x@@|
+            def foo |x''|
                 x 10 20
 
             def no_args ||
                 |x| + 5 x
 
-            def bar |a@ b@@ c@@@|
+            def bar |a' b'' c'''|
                 c b a 1 2 3 4 5
 
             def main ||
