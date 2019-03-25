@@ -1,56 +1,59 @@
 use std::{
     rc::Rc,
     collections::HashMap,
-    fmt::Debug,
 };
 use crate::exec::value::Value;
 
-pub trait CustomFunc: Debug {
-    fn call(&self, _args: &[Value]) -> Value;
-}
-
 #[derive(Clone, Debug)]
-pub struct Prog {
-    globals: HashMap<String, (Rc<String>, Rc<Func>)>,
-    entry: String,
+pub struct Program {
+    globals: HashMap<String, (Rc<String>, Func)>,
+    entry: Rc<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Func {
-    args: usize,
-    body: Body,
-}
-
-#[derive(Clone, Debug)]
-pub enum Body {
-    Native(Expr),
-    Custom(Rc<dyn CustomFunc>),
+    args: Vec<Rc<String>>,
+    env: Vec<Rc<String>>,
+    body: Expr,
 }
 
 #[derive(Clone, Debug)]
 pub enum Expr {
     Value(Value),
-    Push {
-        val: Var,
-        then: Rc<Expr>,
-    },
+    Builtin(Builtin),
     Call {
-        func: Rc<String>,
-        args: Vec<Var>,
+        name: Rc<String>,
+        args: Vec<Expr>,
     },
-    Return,
-    ReplaceFrame {
-        args: Vec<Var>,
+    If {
+        predicate: Box<Expr>,
+        true_block: Box<Expr>,
+        false_block: Box<Expr>,
+    },
+    Let {
+        names: Rc<String>,
+        expr: Box<Expr>,
+    },
+    Many {
+        exprs: Vec<Expr>,
     },
 }
 
 #[derive(Clone, Debug)]
-pub enum Var {
-    Expr(Rc<Expr>),
-    MoveStack {
-        offset: usize,
-    },
-    CloneStack {
-        offset: usize,
-    },
+pub enum Builtin {
+    Head(Box<Expr>),
+    Tail(Box<Expr>),
+    Wrap(Box<Expr>),
+    Cat(Box<Expr>, Box<Expr>),
+
+    Input(Box<Expr>),
+    Print(Box<Expr>, Box<Expr>),
+
+    Add(Box<Expr>, Box<Expr>),
+    Sub(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>),
+    Div(Box<Expr>, Box<Expr>),
+    Rem(Box<Expr>, Box<Expr>),
+    Less(Box<Expr>, Box<Expr>),
+    LessEq(Box<Expr>, Box<Expr>),
 }

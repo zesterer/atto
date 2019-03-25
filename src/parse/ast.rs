@@ -1,22 +1,45 @@
 use std::collections::HashMap;
 
-pub struct Prog {
-    globals: HashMap<String, Func>,
+#[derive(Debug)]
+pub struct Program {
+    pub globals: HashMap<String, Def>,
 }
 
-pub struct Func {
-    args: Vec<(String, usize)>,
-    body: Expr,
+impl Program {
+    pub fn new() -> Self {
+        Self {
+            globals: HashMap::new(),
+        }
+    }
 }
 
+#[derive(Debug)]
+pub struct Def {
+    arity: (usize, usize),
+    body: Vec<Expr>,
+}
+
+impl Def {
+    pub fn new(arity: (usize, usize), body: Vec<Expr>) -> Self {
+        Self {
+            arity,
+            body,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Expr {
     Literal(Literal),
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Let((String, usize), Box<Expr>, Box<Expr>),
+    If(Vec<Expr>),
+    Let(Vec<(String, (usize, usize))>, Box<Expr>, Box<Expr>),
     Builtin(Builtin),
     Call(String, Vec<Expr>), // Includes things that have an arity of zero!
+    Closure((String, (usize, usize)), Vec<Expr>),
+    Many(Vec<Expr>),
 }
 
+#[derive(Debug)]
 pub enum Literal {
     Num(f64),
     Str(String),
@@ -24,21 +47,22 @@ pub enum Literal {
     Null,
 }
 
+#[derive(Debug)]
 pub enum Builtin {
-    Head(Box<Expr>),
-    Tail(Box<Expr>),
-    Wrap(Box<Expr>),
-    Cat(Box<Expr>, Box<Expr>),
+    Head(Vec<Expr>),
+    Tail(Vec<Expr>),
+    Wrap(Vec<Expr>),
+    Cat(Vec<Expr>),
 
-    Input(Box<Expr>),
-    Print(Box<Expr>),
+    Input(Vec<Expr>),
+    Print(Vec<Expr>),
 
-    Eq(Box<Expr>, Box<Expr>),
-    Add(Box<Expr>, Box<Expr>),
-    Sub(Box<Expr>, Box<Expr>),
-    Mul(Box<Expr>, Box<Expr>),
-    Div(Box<Expr>, Box<Expr>),
-    Rem(Box<Expr>, Box<Expr>),
-    Less(Box<Expr>, Box<Expr>),
-    LessEq(Box<Expr>, Box<Expr>),
+    Add(Vec<Expr>),
+    Sub(Vec<Expr>),
+    Mul(Vec<Expr>),
+    Div(Vec<Expr>),
+    Rem(Vec<Expr>),
+    Eq(Vec<Expr>),
+    Less(Vec<Expr>),
+    LessEq(Vec<Expr>),
 }

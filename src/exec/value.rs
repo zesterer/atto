@@ -1,5 +1,14 @@
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    cell::Cell,
+    fmt::Debug,
+};
 use crate::ir::Func;
+
+pub trait CustomFunc: Debug {
+    fn arity(&self) -> (usize, usize);
+    fn call(&self, _args: &[Value]) -> Value;
+}
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -15,4 +24,6 @@ pub enum Value {
         buf: Rc<Vec<Value>>,
     },
     Func(Rc<Func>),
+    Custom(Rc<dyn CustomFunc>),
+    Universe(Cell<bool>),
 }
