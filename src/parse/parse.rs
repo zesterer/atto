@@ -99,8 +99,9 @@ fn read_expr(
     let get_ident_arity = |ident: &str| (&BUILTINS)
         .iter()
         .map(|b| *b)
-        .chain(locals.iter().map(|(l, a)| (l.as_str(), *a)).rev())
-        .chain(globals.iter().map(|(g, a)| (g.as_str(), *a)).rev())
+        .chain(globals.iter().map(|(g, a)| (g.as_str(), *a)))
+        .chain(locals.iter().map(|(l, a)| (l.as_str(), *a)))
+        .rev()
         .find(|(name, _)| *name == ident)
         .map(|(_, arity)| arity);
 
