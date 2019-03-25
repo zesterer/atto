@@ -25,8 +25,11 @@ fn main() {
         def add_five' |x|
             '$+ 5
 
-        def main
-            add_five 10
+        def print'' |@| |msg|
+            __print @ msg
+
+        def main |@|
+            print @ "Hello, world!"
     "#).unwrap();
 
     println!("{:?}", prog);

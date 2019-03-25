@@ -32,7 +32,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
 
     fn is_singular(c: char) -> bool {
         match c {
-            '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' => true,
+            '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' => true,
             _ => false,
         }
     }
@@ -63,7 +63,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                 '$' => state = State::Scalar,
                 c if c.is_whitespace() => {},
                 c if c.is_alphabetic() || c == '_' => state = State::Ident(c.to_string(), false, 0),
-                c if c.is_numeric() => state = State::Num(c.to_string()),
+                c if c.is_digit(10) => state = State::Num(c.to_string()),
                 c if c.is_ascii_punctuation() => state = State::Sym(c.to_string(), false, is_singular(c), 0),
                 '\0' => break,
                 c => errors.push(Error::unexpected_char(c).at(range)),
@@ -123,6 +123,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
             State::Sym(text, scalar, singular, arity) => match c {
                 '\'' => *arity += 1,
                 c if c.is_ascii_punctuation()
+                    && !is_singular(c)
                     && *arity == 0
                     && !*singular => text.push(c),
                 c => {

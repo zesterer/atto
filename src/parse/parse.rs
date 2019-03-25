@@ -128,6 +128,11 @@ fn read_expr(
             tokens.next();
             Expr::Literal(Literal::Null)
         },
+        Token(Lexeme::Str(s), range) => {
+            // Confirm reading str
+            tokens.next();
+            Expr::Literal(Literal::Str(s.clone()))
+        },
         Token(Lexeme::Ident(name, ident_scalar, ident_arity), range) => {
             tokens.next(); // Confirm reading ident
             if let Some(arity) = get_ident_arity(name) {
@@ -245,6 +250,8 @@ fn gen_global_arities(
 
 pub fn parse_program(mut tokens: slice::Iter<Token>) -> Result<Program, Error> {
     let global_arities = gen_global_arities(tokens.clone())?;
+
+    println!("{:?}", global_arities);
 
     let mut prog = Program::new();
 
