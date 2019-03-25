@@ -15,12 +15,12 @@ impl Program {
 
 #[derive(Debug)]
 pub struct Def {
-    arity: (usize, usize),
+    arity: usize,
     body: Vec<Expr>,
 }
 
 impl Def {
-    pub fn new(arity: (usize, usize), body: Vec<Expr>) -> Self {
+    pub fn new(arity: usize, body: Vec<Expr>) -> Self {
         Self {
             arity,
             body,
@@ -32,10 +32,10 @@ impl Def {
 pub enum Expr {
     Literal(Literal),
     If(Vec<Expr>),
-    Let(Vec<(String, (usize, usize))>, Box<Expr>, Box<Expr>),
+    Let(Vec<(String, usize)>, Box<Expr>, Box<Expr>),
     Builtin(Builtin),
     Call(String, Vec<Expr>), // Includes things that have an arity of zero!
-    Closure((String, (usize, usize)), Vec<Expr>),
+    Closure((String, usize), Vec<Expr>),
     Many(Vec<Expr>),
 }
 

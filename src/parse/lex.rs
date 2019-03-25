@@ -3,7 +3,7 @@ use crate::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Lexeme {
-    Ident(String, (usize, usize)),
+    Ident(String, usize),
     Str(String),
     Num(String),
     Def,
@@ -15,8 +15,6 @@ pub enum Lexeme {
     Pipe,
     Dollar,
     SingleQuote,
-    OpenParen,
-    CloseParen,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -26,14 +24,14 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
     enum State {
         Default,
         String(String, bool),
-        Ident(String, (usize, usize)),
-        Sym(String, bool, (usize, usize)),
+        Ident(String, usize),
+        Sym(String, bool, usize),
         Num(String),
     }
 
     fn is_singular(c: char) -> bool {
         match c {
-            '[' | ']' | '{' | '}' | ',' | ';' => true,
+            '(' | ')' | '[' | ']' | '{' | '}' | ',' | ';' => true,
             _ => false,
         }
     }
@@ -61,14 +59,12 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
             State::Default => match c {
                 '"' /*"*/ => state = State::String(String::from("\""), false),
                 '|' => tokens.push(Token(Lexeme::Pipe, range.grow_by(1))),
-                '(' => tokens.push(Token(Lexeme::OpenParen, range.grow_by(1))),
-                ')' => tokens.push(Token(Lexeme::CloseParen, range.grow_by(1))),
                 '$' => tokens.push(Token(Lexeme::Dollar, range.grow_by(1))),
                 '\'' => tokens.push(Token(Lexeme::SingleQuote, range.grow_by(1))),
                 c if c.is_whitespace() => {},
-                c if c.is_alphabetic() || c == '_' => state = State::Ident(c.to_string(), (0, 1)),
+                c if c.is_alphabetic() || c == '_' => state = State::Ident(c.to_string(), 0),
                 c if c.is_numeric() => state = State::Num(c.to_string()),
-                c if c.is_ascii_punctuation() => state = State::Sym(c.to_string(), is_singular(c), (0, 1)),
+                c if c.is_ascii_punctuation() => state = State::Sym(c.to_string(), is_singular(c), 0),
                 '\0' => break,
                 c => errors.push(Error::unexpected_char(c).at(range)),
             },
@@ -80,12 +76,10 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                 '\0' => break,
                 c => text.push(c),
             },
-            State::Ident(text, (in_arity, out_arity)) => match c {
-                '\'' if *out_arity == 1 => *in_arity += 1,
-                '.' => *out_arity += 1,
+            State::Ident(text, arity) => match c {
+                '\'' => *arity += 1,
                 c if (c.is_alphanumeric() || c == '_')
-                    && *in_arity == 0
-                    && *out_arity == 1 => text.push(c),
+                    && *arity == 0 => text.push(c),
                 c => {
                     tokens.push(Token(
                         match text.as_str() {
@@ -95,7 +89,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                             "true" => Lexeme::True,
                             "false" => Lexeme::False,
                             "null" => Lexeme::Null,
-                            _ => Lexeme::Ident(text.clone(), (*in_arity, *out_arity)),
+                            _ => Lexeme::Ident(text.clone(), *arity),
                         },
                         range,
                     ));
@@ -111,15 +105,13 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                     incr = false;
                 },
             },
-            State::Sym(text, singular, (in_arity, out_arity)) => match c {
-                '\'' if *out_arity == 1 => *in_arity += 1,
-                '.' => *out_arity += 1,
+            State::Sym(text, singular, arity) => match c {
+                '\'' => *arity += 1,
                 c if c.is_ascii_punctuation()
-                    && *in_arity == 0
-                    && *out_arity == 1
+                    && *arity == 0
                     && !*singular => text.push(c),
                 c => {
-                    tokens.push(Token(Lexeme::Ident(text.clone(), (*in_arity, *out_arity)), range));
+                    tokens.push(Token(Lexeme::Ident(text.clone(), *arity), range));
                     state = State::Default;
                     incr = false;
                 },
@@ -163,24 +155,24 @@ mod tests {
                 Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 1), 1)),
                 Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 2), 1)),
                 Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 3), 1)),
-                Token(Lexeme::Ident("test".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 4), 4)),
+                Token(Lexeme::Ident("test".to_string(), 0), SrcRange::new(SrcLoc::new(1, 4), 4)),
             ]),
         );
 
         assert_eq!(
-            lex("foobar'''.."),
+            lex("foobar'''"),
             Ok(vec![
-                Token(Lexeme::Ident("foobar".to_string(), (3, 3)), SrcRange::new(SrcLoc::new(1, 1), 11)),
+                Token(Lexeme::Ident("foobar".to_string(), 3), SrcRange::new(SrcLoc::new(1, 1), 9)),
             ]),
         );
 
         assert_eq!(
-            lex("test f00'''bar..bleugh"),
+            lex("test f00'''bar bleugh"),
             Ok(vec![
-                Token(Lexeme::Ident("test".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 1), 4)),
-                Token(Lexeme::Ident("f00".to_string(), (3, 1)), SrcRange::new(SrcLoc::new(1, 6), 6)),
-                Token(Lexeme::Ident("bar".to_string(), (0, 3)), SrcRange::new(SrcLoc::new(1, 12), 5)),
-                Token(Lexeme::Ident("bleugh".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 17), 6)),
+                Token(Lexeme::Ident("test".to_string(), 0), SrcRange::new(SrcLoc::new(1, 1), 4)),
+                Token(Lexeme::Ident("f00".to_string(), 3), SrcRange::new(SrcLoc::new(1, 6), 6)),
+                Token(Lexeme::Ident("bar".to_string(), 0), SrcRange::new(SrcLoc::new(1, 12), 3)),
+                Token(Lexeme::Ident("bleugh".to_string(), 0), SrcRange::new(SrcLoc::new(1, 16), 6)),
             ]),
         );
     }
@@ -190,17 +182,17 @@ mod tests {
         assert_eq!(
             lex("[,];|(' '){}["),
             Ok(vec![
-                Token(Lexeme::Ident("[".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 1), 1)),
-                Token(Lexeme::Ident(",".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 2), 1)),
-                Token(Lexeme::Ident("]".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 3), 1)),
-                Token(Lexeme::Ident(";".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 4), 1)),
+                Token(Lexeme::Ident("[".to_string(), 0), SrcRange::new(SrcLoc::new(1, 1), 1)),
+                Token(Lexeme::Ident(",".to_string(), 0), SrcRange::new(SrcLoc::new(1, 2), 1)),
+                Token(Lexeme::Ident("]".to_string(), 0), SrcRange::new(SrcLoc::new(1, 3), 1)),
+                Token(Lexeme::Ident(";".to_string(), 0), SrcRange::new(SrcLoc::new(1, 4), 1)),
                 Token(Lexeme::Pipe, SrcRange::new(SrcLoc::new(1, 5), 1)),
-                Token(Lexeme::Ident("(".to_string(), (1, 1)), SrcRange::new(SrcLoc::new(1, 6), 2)),
+                Token(Lexeme::Ident("(".to_string(), 1), SrcRange::new(SrcLoc::new(1, 6), 2)),
                 Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 9), 1)),
-                Token(Lexeme::Ident(")".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 10), 1)),
-                Token(Lexeme::Ident("{".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 11), 1)),
-                Token(Lexeme::Ident("}".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 12), 1)),
-                Token(Lexeme::Ident("[".to_string(), (0, 1)), SrcRange::new(SrcLoc::new(1, 13), 1)),
+                Token(Lexeme::Ident(")".to_string(), 0), SrcRange::new(SrcLoc::new(1, 10), 1)),
+                Token(Lexeme::Ident("{".to_string(), 0), SrcRange::new(SrcLoc::new(1, 11), 1)),
+                Token(Lexeme::Ident("}".to_string(), 0), SrcRange::new(SrcLoc::new(1, 12), 1)),
+                Token(Lexeme::Ident("[".to_string(), 0), SrcRange::new(SrcLoc::new(1, 13), 1)),
             ]),
         );
     }
