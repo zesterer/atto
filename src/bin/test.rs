@@ -9,6 +9,8 @@ fn main() {
             __cat __wrap x y
 
         def ]
+            let foo 5
+            let |bar foobar| [1, 3]
             __tail __wrap null
 
         def test

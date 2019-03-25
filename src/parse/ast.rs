@@ -16,11 +16,11 @@ impl Program {
 #[derive(Debug)]
 pub struct Def {
     arity: usize,
-    body: Vec<Expr>,
+    body: Expr,
 }
 
 impl Def {
-    pub fn new(arity: usize, body: Vec<Expr>) -> Self {
+    pub fn new(arity: usize, body: Expr) -> Self {
         Self {
             arity,
             body,
@@ -31,12 +31,11 @@ impl Def {
 #[derive(Debug)]
 pub enum Expr {
     Literal(Literal),
-    If(Vec<Expr>),
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
     Let(Vec<(String, usize)>, Box<Expr>, Box<Expr>),
-    Builtin(Builtin),
+    Builtin(Box<Builtin>),
     Call(String, Vec<Expr>), // Includes things that have an arity of zero!
-    Closure((String, usize), Vec<Expr>),
-    Many(Vec<Expr>),
+    Closure((String, usize), Box<Expr>),
 }
 
 #[derive(Debug)]
@@ -49,20 +48,20 @@ pub enum Literal {
 
 #[derive(Debug)]
 pub enum Builtin {
-    Head(Vec<Expr>),
-    Tail(Vec<Expr>),
-    Wrap(Vec<Expr>),
-    Cat(Vec<Expr>),
+    Head(Expr),
+    Tail(Expr),
+    Wrap(Expr),
+    Cat(Expr, Expr),
 
-    Input(Vec<Expr>),
-    Print(Vec<Expr>),
+    Input(Expr),
+    Print(Expr, Expr),
 
-    Add(Vec<Expr>),
-    Sub(Vec<Expr>),
-    Mul(Vec<Expr>),
-    Div(Vec<Expr>),
-    Rem(Vec<Expr>),
-    Eq(Vec<Expr>),
-    Less(Vec<Expr>),
-    LessEq(Vec<Expr>),
+    Add(Expr, Expr),
+    Sub(Expr, Expr),
+    Mul(Expr, Expr),
+    Div(Expr, Expr),
+    Rem(Expr, Expr),
+    Eq(Expr, Expr),
+    Less(Expr, Expr),
+    LessEq(Expr, Expr),
 }

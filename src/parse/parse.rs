@@ -67,32 +67,31 @@ fn read_builtin(
     locals: &Vec<(String, usize)>,
 ) -> Result<Builtin, Error> {
     Ok(match name {
-        "__head" => Builtin::Head(read_args(tokens, 1, globals, locals)?),
-        "__tail" => Builtin::Tail(read_args(tokens, 1, globals, locals)?),
-        "__wrap" => Builtin::Wrap(read_args(tokens, 1, globals, locals)?),
-        "__cat" => Builtin::Cat(read_args(tokens, 2, globals, locals)?),
+        "__head" => Builtin::Head(read_expr(tokens, globals, locals)?),
+        "__tail" => Builtin::Tail(read_expr(tokens, globals, locals)?),
+        "__wrap" => Builtin::Wrap(read_expr(tokens, globals, locals)?),
+        "__cat" => Builtin::Cat(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
 
-        "__input" => Builtin::Input(read_args(tokens, 1, globals, locals)?),
-        "__print" => Builtin::Input(read_args(tokens, 2, globals, locals)?),
+        "__input" => Builtin::Input(read_expr(tokens, globals, locals)?),
+        "__print" => Builtin::Print(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
 
-        "__add" => Builtin::Add(read_args(tokens, 2, globals, locals)?),
-        "__sub" => Builtin::Sub(read_args(tokens, 2, globals, locals)?),
-        "__mul" => Builtin::Mul(read_args(tokens, 2, globals, locals)?),
-        "__div" => Builtin::Div(read_args(tokens, 2, globals, locals)?),
-        "__rem" => Builtin::Rem(read_args(tokens, 2, globals, locals)?),
-        "__eq" => Builtin::Eq(read_args(tokens, 2, globals, locals)?),
-        "__less" => Builtin::Less(read_args(tokens, 2, globals, locals)?),
-        "__lesseq" => Builtin::LessEq(read_args(tokens, 2, globals, locals)?),
+        "__add" => Builtin::Add(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__sub" => Builtin::Sub(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__mul" => Builtin::Mul(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__div" => Builtin::Div(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__rem" => Builtin::Rem(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__eq" => Builtin::Eq(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__less" => Builtin::Less(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__lesseq" => Builtin::LessEq(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
         _ => unimplemented!(),
     })
 }
 
-fn read_args(
+fn read_expr(
     tokens: &mut slice::Iter<Token>,
-    num: usize,
     globals: &Vec<(String, usize)>,
     locals: &Vec<(String, usize)>,
-) -> Result<Vec<Expr>, Error> {
+) -> Result<Expr, Error> {
     let get_ident_arity = |ident: &str| (&BUILTINS)
         .iter()
         .map(|b| *b)
@@ -101,81 +100,112 @@ fn read_args(
         .find(|(name, _)| *name == ident)
         .map(|(_, arity)| arity);
 
-    let mut exprs = Vec::new();
-
-    for _ in 0..num {
-        match tokens.clone().next().ok_or(Error::unexpected_eof())? {
-            Token(Lexeme::Num(num), range) => {
-                // Confirm reading num
-                tokens.next();
-                exprs.push(Expr::Literal(Literal::Num(
-                    num.parse().map_err(|_| Error::bad_number().at(*range))?
-                )))
-            },
-            Token(Lexeme::True, range) => {
-                // Confirm reading true
-                tokens.next();
-                exprs.push(Expr::Literal(Literal::Bool(true)))
-            },
-            Token(Lexeme::False, range) => {
-                // Confirm reading false
-                tokens.next();
-                exprs.push(Expr::Literal(Literal::Bool(false)))
-            },
-            Token(Lexeme::Null, range) => {
-                // Confirm reading null
-                tokens.next();
-                exprs.push(Expr::Literal(Literal::Null))
-            },
-            Token(Lexeme::Ident(name, ident_arity), range) => {
-                tokens.next(); // Confirm reading ident
-                if let Some(arity) = get_ident_arity(name) {
-                    if *ident_arity != 0 {
-                        return Err(Error::expected(Expected::NoArityIdent).at(*range));
-                    } else if is_builtin(&name) {
-                        exprs.push(Expr::Builtin(read_builtin(name, tokens, globals, locals)?));
-                    } else {
-                        exprs.push(Expr::Call(
-                            name.clone(),
-                            read_args(tokens, arity, globals, locals)?,
-                        ));
+    Ok(match tokens.clone().next().ok_or(Error::unexpected_eof())? {
+        Token(Lexeme::Num(num), range) => {
+            // Confirm reading num
+            tokens.next();
+            Expr::Literal(Literal::Num(
+                num.parse().map_err(|_| Error::bad_number().at(*range))?
+            ))
+        },
+        Token(Lexeme::True, range) => {
+            // Confirm reading true
+            tokens.next();
+            Expr::Literal(Literal::Bool(true))
+        },
+        Token(Lexeme::False, range) => {
+            // Confirm reading false
+            tokens.next();
+            Expr::Literal(Literal::Bool(false))
+        },
+        Token(Lexeme::Null, range) => {
+            // Confirm reading null
+            tokens.next();
+            Expr::Literal(Literal::Null)
+        },
+        Token(Lexeme::Ident(name, ident_arity), range) => {
+            tokens.next(); // Confirm reading ident
+            if let Some(arity) = get_ident_arity(name) {
+                if *ident_arity != 0 {
+                    return Err(Error::expected(Expected::NoArityIdent).at(*range));
+                } else if is_builtin(&name) {
+                    Expr::Builtin(Box::new(read_builtin(name, tokens, globals, locals)?))
+                } else {
+                    let mut args = Vec::new();
+                    for _ in 0..arity {
+                        args.push(read_expr(tokens, globals, locals)?);
                     }
-                } else {
-                    return Err(Error::unknown_ident(name.clone()).at(*range));
+
+                    Expr::Call(
+                        name.clone(),
+                        args,
+                    )
                 }
-            },
-            Token(Lexeme::Pipe, range) => {
-                let params = read_params(tokens)?;
-                if params.len() != 1 {
-                    return Err(Error::one_param_only().at(*range));
-                } else {
-                    let param = params.into_iter().next().unwrap();
+            } else {
+                return Err(Error::unknown_ident(name.clone()).at(*range));
+            }
+        },
+        Token(Lexeme::Pipe, range) => {
+            let params = read_params(tokens)?;
+            if params.len() != 1 {
+                return Err(Error::one_param_only().at(*range));
+            } else {
+                let param = params.into_iter().next().unwrap();
 
-                    let mut body_locals = locals.clone();
-                    body_locals.push(param.clone());
+                let mut body_locals = locals.clone();
+                body_locals.push(param.clone());
 
-                    let body = read_args(tokens, 1, globals, &body_locals)?;
-                    exprs.push(Expr::Closure(
-                        param,
-                        body,
-                    ));
-                }
-            },
-            Token(Lexeme::If, range) => {
-                tokens.next(); // Confirm reading 'if'
+                let body = read_expr(tokens, globals, &body_locals)?;
+                Expr::Closure(
+                    param,
+                    Box::new(body),
+                )
+            }
+        },
+        Token(Lexeme::If, range) => {
+            tokens.next(); // Confirm reading 'if'
 
-                exprs.push(Expr::If(read_args(tokens, 3, globals, locals)?));
-            },
-            Token(Lexeme::Def, range) => {
-                tokens.next(); // Confirm reading 'def'
+            Expr::If(
+                Box::new(read_expr(tokens, globals, locals)?),
+                Box::new(read_expr(tokens, globals, locals)?),
+                Box::new(read_expr(tokens, globals, locals)?),
+            )
+        },
+        Token(Lexeme::Let, range) => {
+            tokens.next(); // Confirm reading 'let'
 
-                return Err(Error::unexpected(Unexpected::Def).at(*range));
-            },
-            t => unimplemented!("{:?}", t),
-        }
-    }
+            let params = match tokens.clone().next() {
+                Some(Token(Lexeme::Ident(name, arity), range)) => {
+                    tokens.next();
+                    vec![(name.clone(), *arity)]
+                },
+                Some(Token(Lexeme::Pipe, range)) => read_params(tokens)?,
+                Some(Token(_, range)) => {
+                    return Err(Error::expected(Expected::ArityIdent).at(*range));
+                },
+                None => {
+                    return Err(Error::unexpected_eof());
+                },
+            };
 
-    Ok(exprs)
+            let expr = read_expr(tokens, globals, locals)?;
+
+            let mut then_locals = locals.clone();
+            then_locals.append(&mut params.clone());
+
+            Expr::Let(
+                params,
+                Box::new(expr),
+                Box::new(read_expr(tokens, globals, &then_locals)?),
+            )
+        },
+        Token(Lexeme::Def, range) => {
+            tokens.next(); // Confirm reading 'def'
+
+            return Err(Error::unexpected(Unexpected::Def).at(*range));
+        },
+        t => unimplemented!("{:?}", t),
+    })
 }
 
 fn gen_global_arities(
@@ -211,7 +241,7 @@ pub fn parse_program(mut tokens: slice::Iter<Token>) -> Result<Program, Error> {
         match token {
             Token(Lexeme::Def, range) => match tokens.next() {
                 Some(Token(Lexeme::Ident(name, arity), range)) => {
-                    let body = read_args(&mut tokens, 1, &global_arities, &Vec::new())?;
+                    let body = read_expr(&mut tokens, &global_arities, &Vec::new())?;
                     prog.globals.insert(
                         name.to_string(),
                         Def::new(*arity, body),
