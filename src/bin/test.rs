@@ -15,6 +15,18 @@ fn main() {
 
         def test
             [1, 2, 3, 4]
+
+        def +'' |x| |y|
+            __add x y
+
+        def ''' |f'| |arg|
+            f arg
+
+        def add_five' |x|
+            '$+ 5
+
+        def main
+            add_five 10
     "#).unwrap();
 
     println!("{:?}", prog);

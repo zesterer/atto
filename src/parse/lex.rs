@@ -3,7 +3,7 @@ use crate::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Lexeme {
-    Ident(String, usize),
+    Ident(String, bool, usize),
     Str(String),
     Num(String),
     Def,
@@ -23,15 +23,16 @@ pub struct Token(pub Lexeme, pub SrcRange);
 pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
     enum State {
         Default,
+        Scalar,
         String(String, bool),
-        Ident(String, usize),
-        Sym(String, bool, usize),
+        Ident(String, bool, usize),
+        Sym(String, bool, bool, usize),
         Num(String),
     }
 
     fn is_singular(c: char) -> bool {
         match c {
-            '(' | ')' | '[' | ']' | '{' | '}' | ',' | ';' => true,
+            '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' => true,
             _ => false,
         }
     }
@@ -59,14 +60,28 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
             State::Default => match c {
                 '"' /*"*/ => state = State::String(String::from("\""), false),
                 '|' => tokens.push(Token(Lexeme::Pipe, range.grow_by(1))),
-                '$' => tokens.push(Token(Lexeme::Dollar, range.grow_by(1))),
-                '\'' => tokens.push(Token(Lexeme::SingleQuote, range.grow_by(1))),
+                '$' => state = State::Scalar,
                 c if c.is_whitespace() => {},
-                c if c.is_alphabetic() || c == '_' => state = State::Ident(c.to_string(), 0),
+                c if c.is_alphabetic() || c == '_' => state = State::Ident(c.to_string(), false, 0),
                 c if c.is_numeric() => state = State::Num(c.to_string()),
-                c if c.is_ascii_punctuation() => state = State::Sym(c.to_string(), is_singular(c), 0),
+                c if c.is_ascii_punctuation() => state = State::Sym(c.to_string(), false, is_singular(c), 0),
                 '\0' => break,
                 c => errors.push(Error::unexpected_char(c).at(range)),
+            },
+            State::Scalar => match c {
+                c if c.is_alphabetic() => {
+                    state = State::Ident(String::new(), true, 0);
+                    incr = false;
+                },
+                c if c.is_ascii_punctuation() => {
+                    state = State::Sym(String::new(), true, is_singular(c), 0);
+                    incr = false;
+                },
+                c => {
+                    errors.push(Error::unexpected_char('$').at(range));
+                    state = State::Default;
+                    incr = false;
+                },
             },
             State::String(text, escaped) => match c {
                 '"' /*"*/ => {
@@ -76,7 +91,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                 '\0' => break,
                 c => text.push(c),
             },
-            State::Ident(text, arity) => match c {
+            State::Ident(text, scalar, arity) => match c {
                 '\'' => *arity += 1,
                 c if (c.is_alphanumeric() || c == '_')
                     && *arity == 0 => text.push(c),
@@ -89,7 +104,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                             "true" => Lexeme::True,
                             "false" => Lexeme::False,
                             "null" => Lexeme::Null,
-                            _ => Lexeme::Ident(text.clone(), *arity),
+                            _ => Lexeme::Ident(text.clone(), *scalar, *arity),
                         },
                         range,
                     ));
@@ -105,13 +120,13 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                     incr = false;
                 },
             },
-            State::Sym(text, singular, arity) => match c {
+            State::Sym(text, scalar, singular, arity) => match c {
                 '\'' => *arity += 1,
                 c if c.is_ascii_punctuation()
                     && *arity == 0
                     && !*singular => text.push(c),
                 c => {
-                    tokens.push(Token(Lexeme::Ident(text.clone(), *arity), range));
+                    tokens.push(Token(Lexeme::Ident(text.clone(), *scalar, *arity), range));
                     state = State::Default;
                     incr = false;
                 },

@@ -27,7 +27,11 @@ fn read_params(tokens: &mut slice::Iter<Token>) -> Result<Vec<(String, usize)>, 
     // Read parameter identifiers until a pipe, or a non-identifier
     while let Some(token) = tokens.next() {
         match token {
-            Token(Lexeme::Ident(ident, arity), _) => params.push((ident.clone(), *arity)),
+            Token(Lexeme::Ident(ident, scalar, arity), range) => if *scalar {
+                return Err(Error::expected(Expected::ArityIdent).at(*range));
+            } else {
+                params.push((ident.clone(), *arity))
+            },
             Token(Lexeme::Pipe, _) => return Ok(params),
             Token(_, range) => return Err(Error::expected(Expected::ArityIdent).at(*range)),
         }
@@ -123,11 +127,13 @@ fn read_expr(
             tokens.next();
             Expr::Literal(Literal::Null)
         },
-        Token(Lexeme::Ident(name, ident_arity), range) => {
+        Token(Lexeme::Ident(name, ident_scalar, ident_arity), range) => {
             tokens.next(); // Confirm reading ident
             if let Some(arity) = get_ident_arity(name) {
                 if *ident_arity != 0 {
                     return Err(Error::expected(Expected::NoArityIdent).at(*range));
+                } else if *ident_scalar {
+                    Expr::Call(name.clone(), vec![])
                 } else if is_builtin(&name) {
                     Expr::Builtin(Box::new(read_builtin(name, tokens, globals, locals)?))
                 } else {
@@ -175,9 +181,13 @@ fn read_expr(
             tokens.next(); // Confirm reading 'let'
 
             let params = match tokens.clone().next() {
-                Some(Token(Lexeme::Ident(name, arity), range)) => {
-                    tokens.next();
-                    vec![(name.clone(), *arity)]
+                Some(Token(Lexeme::Ident(name, scalar, arity), range)) => {
+                    if *scalar {
+                        return Err(Error::expected(Expected::ArityIdent).at(*range));
+                    } else {
+                        tokens.next();
+                        vec![(name.clone(), *arity)]
+                    }
                 },
                 Some(Token(Lexeme::Pipe, range)) => read_params(tokens)?,
                 Some(Token(_, range)) => {
@@ -219,7 +229,7 @@ fn gen_global_arities(
         if let Token(Lexeme::Def, range) = token {
             // Get the name of the function
             let (name, arity) = match tokens.next().ok_or(Error::unexpected_eof())? {
-                Token(Lexeme::Ident(name, arity), _) => (name, *arity),
+                Token(Lexeme::Ident(name, _, arity), _) => (name, *arity),
                 Token(_, range) =>
                     return Err(Error::expected(Expected::NoArityIdent).at(*range)),
             };
@@ -240,12 +250,16 @@ pub fn parse_program(mut tokens: slice::Iter<Token>) -> Result<Program, Error> {
     while let Some(token) = tokens.next() {
         match token {
             Token(Lexeme::Def, range) => match tokens.next() {
-                Some(Token(Lexeme::Ident(name, arity), range)) => {
-                    let body = read_expr(&mut tokens, &global_arities, &Vec::new())?;
-                    prog.globals.insert(
-                        name.to_string(),
-                        Def::new(*arity, body),
-                    );
+                Some(Token(Lexeme::Ident(name, scalar, arity), range)) => {
+                    if *scalar {
+                        return Err(Error::expected(Expected::ArityIdent).at(*range));
+                    } else {
+                        let body = read_expr(&mut tokens, &global_arities, &Vec::new())?;
+                        prog.globals.insert(
+                            name.to_string(),
+                            Def::new(*arity, body),
+                        );
+                    }
                 },
                 Some(Token(_, range)) => {
                     return Err(Error::expected(Expected::ArityIdent).at(*range));
