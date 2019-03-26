@@ -246,7 +246,7 @@ pub enum Error {
 
 pub fn run(prog: &Program) -> Result<Value, Error> {
     if let Some(main) = prog.globals.get("main") {
-        Ok(eval(main, prog, &vec![Value::Universe(NEXT_UNIVERSE.fetch_add(1, Ordering::Relaxed) + 1)], &HashMap::new()))
+        Ok(eval(main, prog, &vec![Value::Universe(NEXT_UNIVERSE.load(Ordering::Relaxed))], &HashMap::new()))
     } else {
         Err(Error::NoMain)
     }
