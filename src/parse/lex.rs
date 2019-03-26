@@ -58,7 +58,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
 
         match &mut state {
             State::Default => match c {
-                '"' /*"*/ => state = State::String(String::from("\""), false),
+                '"' /*"*/ => state = State::String(String::new(), false),
                 '|' => tokens.push(Token(Lexeme::Pipe, range.grow_by(1))),
                 '$' => state = State::Scalar,
                 c if c.is_whitespace() => {},

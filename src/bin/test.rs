@@ -1,36 +1,27 @@
-use atto::parse;
+use atto::{
+    parse,
+    exec,
+};
 
 fn main() {
     let prog = parse::code(r#"
-        def ['' |items| |t|
-            __cat __wrap items t
-
-        def ,'' |x| |y|
-            __cat __wrap x y
-
-        def ]
-            let foo 5
-            let |bar foobar| [1, 3]
-            __tail __wrap null
-
-        def test
-            [1, 2, 3, 4]
-
         def +'' |x| |y|
             __add x y
-
-        def ''' |f'| |arg|
-            f arg
-
-        def add_five' |x|
-            '$+ 5
 
         def print'' |@| |msg|
             __print @ msg
 
+        def input' |@|
+            __input @
+
+        def #'' |x| |y| y
+
         def main |@|
-            print @ "Hello, world!"
+            let x 100
+            let add_five' |x| + x 5
+            let |@ msg| input @
+            print @ msg
     "#).unwrap();
 
-    println!("{:?}", prog);
+    println!("{:?}", exec::ast::run(&prog));
 }

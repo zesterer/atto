@@ -3,7 +3,6 @@ use super::{
     lex::{Lexeme, Token},
     ast::{
         Program,
-        Def,
         Expr,
         Literal,
         Builtin,
@@ -186,7 +185,7 @@ fn read_expr(
         Token(Lexeme::Let, range) => {
             tokens.next(); // Confirm reading 'let'
 
-            let params = match tokens.clone().next() {
+            let idents = match tokens.clone().next() {
                 Some(Token(Lexeme::Ident(name, scalar, arity), range)) => {
                     if *scalar {
                         return Err(Error::expected(Expected::ArityIdent).at(*range));
@@ -207,13 +206,21 @@ fn read_expr(
             let expr = read_expr(tokens, globals, locals)?;
 
             let mut then_locals = locals.clone();
-            then_locals.append(&mut params.clone());
+            then_locals.append(&mut idents.clone());
 
-            Expr::Let(
-                params,
-                Box::new(expr),
-                Box::new(read_expr(tokens, globals, &then_locals)?),
-            )
+            if idents.len() == 1 {
+                Expr::Let(
+                    idents.into_iter().next().unwrap().0,
+                    Box::new(expr),
+                    Box::new(read_expr(tokens, globals, &then_locals)?),
+                )
+            } else {
+                Expr::LetDestructure(
+                    idents.into_iter().map(|(name, _)| name).collect(),
+                    Box::new(expr),
+                    Box::new(read_expr(tokens, globals, &then_locals)?),
+                )
+            }
         },
         Token(Lexeme::Def, range) => {
             tokens.next(); // Confirm reading 'def'
@@ -251,8 +258,6 @@ fn gen_global_arities(
 pub fn parse_program(mut tokens: slice::Iter<Token>) -> Result<Program, Error> {
     let global_arities = gen_global_arities(tokens.clone())?;
 
-    println!("{:?}", global_arities);
-
     let mut prog = Program::new();
 
     while let Some(token) = tokens.next() {
@@ -265,7 +270,7 @@ pub fn parse_program(mut tokens: slice::Iter<Token>) -> Result<Program, Error> {
                         let body = read_expr(&mut tokens, &global_arities, &Vec::new())?;
                         prog.globals.insert(
                             name.to_string(),
-                            Def::new(*arity, body),
+                            body,
                         );
                     }
                 },
