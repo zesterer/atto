@@ -21,6 +21,16 @@ def floor' |x|
 def ceil' |x|
 	__ceil x
 
+def min'' |x| |y|
+	if < x y
+		x
+	y
+
+def max'' |x| |y|
+	if > x y
+		x
+	y
+
 def _ "COMPARISON OPERATORS"
 
 def ='' |x| |y|
@@ -102,6 +112,29 @@ def flatten' |ll|
 		head ll
 		flatten tail ll
 
+def _ "NUMERICAL LIST OPERATIONS"
+
+def sort_cmp'' |n| |list|
+	if = empty list
+		[empty, empty, empty]
+	let |lo mid hi| := sort_cmp n tail list
+	cmp head list n
+		|h| [cat [h] lo, mid, hi]
+		|h| [lo, cat [h] mid, hi]
+		|h| [lo, mid, cat [h] hi]
+
+def list_min' |list|
+	if = empty list
+		null
+	for iter list (head list)
+		|min_so_far| |n| min min_so_far n
+
+def list_max' |list|
+	if = empty list
+		null
+	for iter list (head list)
+		|max_so_far| |n| max max_so_far n
+
 def _ "FLOW CONTROLS"
 
 def #'' |x| |y| y
@@ -117,3 +150,31 @@ def cmp''''' |x| |y| |if_less'| |if_eq'| |if_greater'|
 	if > x y
 		if_greater x
 	if_eq x
+
+def :=' |x|
+	x
+
+def done null
+
+def _ "ITERATION"
+
+def for''' |iter| |init| |f''|
+	let |first iter_init iter_f'| := iter
+	let |continue next iter_next| := iter_f iter_init
+	if continue
+		for [next, iter_next, $iter_f] (f init next) $f
+	init
+
+def range'' |start| |end|
+	[start, start, |prev| if = prev end
+		[false, null, null]
+		[true, prev, + prev 1]
+	]
+
+def iter' |list|
+	[head list, list, |prev| if = empty prev
+		[false, null, null]
+		[true, head prev, tail prev]
+	]
+
+def _ "ITERATOR UTILITIES"
