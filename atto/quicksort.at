@@ -7,7 +7,7 @@ def quicksort' |list|
 	flatten [quicksort lo, mid, quicksort hi]
 
 def main |@|
-	print @ quicksort [
+	print @ rev quicksort [
 		45, 75, 98, 24, 10, 12, 60, 32, 17, 41,
 		36, 61, 30, 27, 42, 87, 83, 59, 11, 56,
 		22, 99, 50, 76,  6, 57, 19, 52,  7, 51,

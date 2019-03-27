@@ -36,6 +36,9 @@ def _ "COMPARISON OPERATORS"
 def ='' |x| |y|
 	__eq x y
 
+def !='' |x| |y|
+	! __eq x y
+
 def <'' |x| |y|
 	__less x y
 
@@ -47,6 +50,13 @@ def <='' |x| |y|
 
 def >='' |x| |y|
 	__lesseq y x
+
+def !' |x|
+	if = true x
+		false
+	if = false x
+		true
+	null
 
 def _ "LIST OPERATORS"
 
@@ -72,6 +82,11 @@ def print'' |@| |msg|
 
 def input' |@|
 	__input @
+
+def _ "SYNTAX UTILITIES"
+
+def ''' |f'| |arg|
+	f arg
 
 def _ "LIST UTILITIES"
 
@@ -112,6 +127,11 @@ def flatten' |ll|
 		head ll
 		flatten tail ll
 
+def rev' |list|
+	if = empty list
+		empty
+	cat (rev tail list) wrap head list
+
 def _ "NUMERICAL LIST OPERATIONS"
 
 def sort_cmp'' |n| |list|
@@ -123,17 +143,13 @@ def sort_cmp'' |n| |list|
 		|h| [lo, cat [h] mid, hi]
 		|h| [lo, mid, cat [h] hi]
 
-def list_min' |list|
-	if = empty list
-		null
-	for iter list (head list)
-		|min_so_far| |n| min min_so_far n
-
-def list_max' |list|
-	if = empty list
-		null
-	for iter list (head list)
-		|max_so_far| |n| max max_so_far n
+def quicksort' |list|
+	if <= len list 1
+		list
+	let |lo mid hi| := sort_cmp
+		nth (floor / len list 2) list
+		list
+	flatten [quicksort lo, mid, quicksort hi]
 
 def _ "FLOW CONTROLS"
 
@@ -154,27 +170,91 @@ def cmp''''' |x| |y| |if_less'| |if_eq'| |if_greater'|
 def :=' |x|
 	x
 
-def done null
-
 def _ "ITERATION"
 
-def for''' |iter| |init| |f''|
-	let |first iter_init iter_f'| := iter
-	let |continue next iter_next| := iter_f iter_init
-	if continue
-		for [next, iter_next, $iter_f] (f init next) $f
-	init
+def ilist' |list|
+	[list, |payload| (
+		if = empty payload
+			[null, empty]
+		[head payload, tail payload]
+	)]
 
-def range'' |start| |end|
-	[start, start, |prev| if = prev end
-		[false, null, null]
-		[true, prev, + prev 1]
-	]
+def irange'' |start| |end|
+	[start, |n| (
+		if = end n
+			[null, empty]
+		[n, + n 1]
+	)]
 
-def iter' |list|
-	[head list, list, |prev| if = empty prev
-		[false, null, null]
-		[true, head prev, tail prev]
-	]
+def next' |iter|
+	let |payload f'| iter
+	head f payload
 
-def _ "ITERATOR UTILITIES"
+def incr' |iter|
+	let |payload f'| iter
+	[nth 1 (f payload), $f]
+
+def iskip'' |n| |iter|
+	if = n 0
+		iter
+	iskip (- n 1) incr iter
+
+def fold'' |init| |f''|
+	|iter|
+		if = null next iter
+			init
+		let fold''' $fold
+		fold
+			f init next iter
+			$f
+			incr iter
+
+def reduce' |f''|
+	|iter|
+		if = null next iter
+			null
+		let fold''' $fold
+		fold
+			next iter
+			$f
+			incr iter
+
+def with'' |iter| |ops|
+	if = empty ops
+		iter
+	let f' head ops
+	with
+		f iter
+		tail ops
+
+def =>'' |op| |ops|
+	cat wrap op
+		ops
+
+def map' |f'|
+	|iter|
+		[iter, |payload| (
+			let iter payload
+			if = null next iter
+				null
+			[f next iter, incr iter]
+		)]
+
+def skip' |n|
+	|iter|
+		[iskip n iter, |payload| (
+			let iter payload
+			if = null next iter
+				null
+			[next iter, incr iter]
+		)]
+
+def collect
+	|iter|
+	if = null next iter
+		empty
+	cat wrap next iter
+		let collect' collect
+		collect incr iter
+
+def done empty
