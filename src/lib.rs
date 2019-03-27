@@ -75,6 +75,13 @@ impl Error {
         }
     }
 
+    pub fn no_main() -> Self {
+        Self {
+            kind: ErrorKind::NoMain,
+            range: None,
+        }
+    }
+
     pub fn at(mut self, range: SrcRange) -> Self {
         self.range = Some(range);
         self
@@ -91,6 +98,7 @@ pub enum ErrorKind {
     UnknownIdent(String), // The identifier was not found in the current scope
     IncorrectArity, // The parser tried to parse an expression but found an unbalanced net arity
     OneParamOnly, // Closures are only permitted to have a single parameter
+    NoMain, // The program did not contain a main entry point
 }
 
 #[derive(Debug, PartialEq)]

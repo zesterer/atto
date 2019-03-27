@@ -29,11 +29,12 @@ pub enum Builtin {
     Head(Expr), Tail(Expr),
     Wrap(Expr), Cat(Expr, Expr),
 
-    Input(Expr), Print(Expr, Expr),
+    Input(Expr), Print(Expr, Expr), Debug(Expr),
 
     Add(Expr, Expr), Sub(Expr, Expr),
     Mul(Expr, Expr), Div(Expr, Expr), Rem(Expr, Expr),
     Eq(Expr, Expr), Less(Expr, Expr), LessEq(Expr, Expr),
+    Floor(Expr), Ceil(Expr),
 }
 
 impl Program {

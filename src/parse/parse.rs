@@ -40,7 +40,7 @@ fn read_params(tokens: &mut slice::Iter<Token>) -> Result<Vec<(String, usize)>, 
     Err(Error::expected_delimiter('|'))
 }
 
-const BUILTINS: [(&'static str, usize); 14] = [
+const BUILTINS: [(&'static str, usize); 17] = [
     ("__head", 1),
     ("__tail", 1),
     ("__wrap", 1),
@@ -54,9 +54,12 @@ const BUILTINS: [(&'static str, usize); 14] = [
     ("__eq", 2),
     ("__less", 2),
     ("__lesseq", 2),
+    ("__floor", 1),
+    ("__ceil", 1),
 
     ("__input", 1),
     ("__print", 2),
+    ("__debug", 1),
 ];
 
 fn is_builtin(name: &str) -> bool {
@@ -77,6 +80,7 @@ fn read_builtin(
 
         "__input" => Builtin::Input(read_expr(tokens, globals, locals)?),
         "__print" => Builtin::Print(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__debug" => Builtin::Debug(read_expr(tokens, globals, locals)?),
 
         "__add" => Builtin::Add(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
         "__sub" => Builtin::Sub(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
@@ -86,6 +90,8 @@ fn read_builtin(
         "__eq" => Builtin::Eq(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
         "__less" => Builtin::Less(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
         "__lesseq" => Builtin::LessEq(read_expr(tokens, globals, locals)?, read_expr(tokens, globals, locals)?),
+        "__floor" => Builtin::Floor(read_expr(tokens, globals, locals)?),
+        "__ceil" => Builtin::Ceil(read_expr(tokens, globals, locals)?),
         _ => unimplemented!(),
     })
 }

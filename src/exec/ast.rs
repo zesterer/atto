@@ -8,11 +8,17 @@ use std::{
         AtomicUsize,
     },
 };
-use crate::parse::ast::{
-    Program,
-    Expr,
-    Literal,
-    Builtin,
+use crate::{
+    Error,
+    parse::{
+        self,
+        ast::{
+            Program,
+            Expr,
+            Literal,
+            Builtin,
+        },
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -202,8 +208,14 @@ impl<'a> Value<'a> {
             }, Value::List {
                 offset: offset_b, buf: buf_b
             }) => {
-                (buf_a.len() - offset_a) == (buf_b.len() - offset_b) &&
-                !buf_a.iter().zip(buf_b.iter()).any(|(a, b)| a.eq(b))
+                let len_a = (buf_a.len() - offset_a);
+                let len_b = (buf_b.len() - offset_b);
+                if len_a == 0 && len_b == 0 {
+                    true
+                } else {
+                    len_a == len_b &&
+                    !buf_a.iter().zip(buf_b.iter()).any(|(a, b)| !a.eq(b))
+                }
             },
             _ => false,
         }
@@ -219,6 +231,20 @@ impl<'a> Value<'a> {
     fn lesseq(self, other: Self) -> bool {
         match (self, other) {
             (Value::Num(a), Value::Num(b)) => a <= b,
+            _ => unimplemented!(),
+        }
+    }
+
+    fn floor(self) -> Value<'a> {
+        match self {
+            Value::Num(a) => Value::Num(a.floor()),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn ceil(self) -> Value<'a> {
+        match self {
+            Value::Num(a) => Value::Num(a.ceil()),
             _ => unimplemented!(),
         }
     }
@@ -239,20 +265,23 @@ impl<'a> Value<'a> {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {
-    NoMain,
+pub fn exec(code: &str) -> Result<(), Vec<Error>> {
+    let mut src = String::from(include_str!("../../atto/core.at"));
+    src += code;
+    run_prog(&parse::code(&src)?).map_err(|err| vec![err])?;
+    Ok(())
 }
 
-pub fn run(prog: &Program) -> Result<Value, Error> {
+fn run_prog(prog: &Program) -> Result<Value, Error> {
     if let Some(main) = prog.globals.get("main") {
         Ok(eval(main, prog, &vec![Value::Universe(NEXT_UNIVERSE.load(Ordering::Relaxed))], &HashMap::new()))
     } else {
-        Err(Error::NoMain)
+        Err(Error::no_main())
     }
 }
 
 fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &HashMap<&'a str, Value<'a>>) -> Value<'a> {
+    //println!("Evaluating... {:?}", expr);
     match expr {
         Expr::Literal(lit) => match lit {
             Literal::Num(x) => Value::Num(*x),
@@ -291,6 +320,11 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
         Expr::Builtin(builtin) => match builtin.as_ref() {
             Builtin::Print(a, b) => eval(&a, prog, args, locals).print(eval(&b, prog, args, locals)),
             Builtin::Input(a) => eval(&a, prog, args, locals).input(),
+            Builtin::Debug(a) => {
+                let val = eval(&a, prog, args, locals);
+                println!("{:?}", val);
+                val
+            },
 
             Builtin::Head(a) => eval(&a, prog, args, locals).head(),
             Builtin::Tail(a) => eval(&a, prog, args, locals).tail(),
@@ -306,6 +340,8 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
             Builtin::Eq(a, b) => Value::Bool(eval(&a, prog, args, locals).eq(&eval(&b, prog, args, locals))),
             Builtin::Less(a, b) => Value::Bool(eval(&a, prog, args, locals).less(eval(&b, prog, args, locals))),
             Builtin::LessEq(a, b) => Value::Bool(eval(&a, prog, args, locals).lesseq(eval(&b, prog, args, locals))),
+            Builtin::Floor(a) => eval(&a, prog, args, locals).floor(),
+            Builtin::Ceil(a) => eval(&a, prog, args, locals).ceil(),
             _ => unimplemented!(),
         },
         Expr::Call(name, call_args) => {

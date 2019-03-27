@@ -1,0 +1,19 @@
+def sort_cmp'' |n| |list|
+	if = empty list
+		[empty, empty, empty]
+	let |lo mid hi| sort_cmp n tail list
+	cmp head list n
+		|h| [cat [h] lo, mid, hi]
+		|h| [lo, cat [h] mid, hi]
+		|h| [lo, mid, cat [h] hi]
+
+def quicksort' |list|
+	if < len list 2
+		list
+	let |lo mid hi| sort_cmp
+		nth (floor / len list 2) list
+		list
+	flatten [quicksort lo, mid, quicksort hi]
+
+def main |@|
+	print @ quicksort [4, 5, 1, 3, 2, 7, 2, 3]

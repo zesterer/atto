@@ -1,0 +1,119 @@
+def _ "ARITHMETIC OPERATORS"
+
+def +'' |x| |y|
+	__add x y
+
+def -'' |x| |y|
+	__sub x y
+
+def *'' |x| |y|
+	__mul x y
+
+def /'' |x| |y|
+	__div x y
+
+def %'' |x| |y|
+	__rem x y
+
+def floor' |x|
+	__floor x
+
+def ceil' |x|
+	__ceil x
+
+def _ "COMPARISON OPERATORS"
+
+def ='' |x| |y|
+	__eq x y
+
+def <'' |x| |y|
+	__less x y
+
+def >'' |x| |y|
+	__less y x
+
+def <='' |x| |y|
+	__lesseq x y
+
+def >='' |x| |y|
+	__lesseq y x
+
+def _ "LIST OPERATORS"
+
+def head' |l|
+	__head l
+
+def tail' |l|
+	__tail l
+
+def wrap' |l|
+	__wrap l
+
+def cat'' |a| |b|
+	__cat a b
+
+def pair'' |a| |b|
+	__cat __wrap a __wrap b
+
+def _ "IO"
+
+def print'' |@| |msg|
+	__print @ msg
+
+def input' |@|
+	__input @
+
+def _ "LIST UTILITIES"
+
+def ['' |items| |t|
+	__cat __wrap items t
+
+def ,'' |x| |y|
+	__cat __wrap x y
+
+def ] empty
+
+def empty __tail __wrap null
+
+def len' |list|
+	if = empty list
+		0
+	+ 1 len tail list
+
+def nth'' |n| |list|
+	if = 0 n
+		head list
+	nth - n 1 tail list
+
+def split'' |n| |list|
+	if = 0 n
+		[empty, list]
+	let |h t| split - n 1 tail list
+	pair
+		cat head list h
+		t
+
+def flatten' |ll|
+	if = empty ll
+		empty
+	if = 1 len ll
+		head ll
+	cat
+		head ll
+		flatten tail ll
+
+def _ "FLOW CONTROLS"
+
+def #'' |x| |y| y
+
+def ('' |expr| |_|
+	expr
+
+def ) null
+
+def cmp''''' |x| |y| |if_less'| |if_eq'| |if_greater'|
+	if < x y
+		if_less x
+	if > x y
+		if_greater x
+	if_eq x
