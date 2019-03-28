@@ -1,5 +1,6 @@
 pub mod parse;
 pub mod ir;
+pub mod hir;
 pub mod exec;
 
 use parse::src::SrcRange;

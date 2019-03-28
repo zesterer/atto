@@ -174,7 +174,7 @@ fn read_expr(
 
                 let body = read_expr(tokens, globals, &body_locals)?;
                 Expr::Closure(
-                    param,
+                    param.0,
                     Box::new(body),
                 )
             }

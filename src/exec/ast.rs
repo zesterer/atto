@@ -359,7 +359,7 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
                 panic!("Could not find item '{}'", name);
             }
         },
-        Expr::Closure((name, _), body) => match args.get(0) {
+        Expr::Closure(name, body) => match args.get(0) {
             Some(arg) => {
                 let mut locals = locals.clone();
                 locals.insert(name, arg.clone());
