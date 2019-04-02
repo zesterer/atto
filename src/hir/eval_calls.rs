@@ -5,7 +5,7 @@ impl Expr {
     fn eval_calls(&mut self) {
         match self {
             Expr::CallExpr(callee, args) if args.len() > 0 => match callee.as_mut() {
-                Expr::Value(Value::Func(param, body)) => {
+                Expr::Value(Value::Func(Decl::Single(param), body)) => {
                     let mut args_iter = args.iter_mut();
                     let next_arg = args_iter.next().unwrap();
                     body.replace_local(param, next_arg);

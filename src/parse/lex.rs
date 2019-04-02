@@ -14,7 +14,7 @@ pub enum Lexeme {
     Null,
     Pipe,
     Dollar,
-    SingleQuote,
+    Colon,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -32,7 +32,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
 
     fn is_singular(c: char) -> bool {
         match c {
-            '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' => true,
+            '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' | ':' => true,
             _ => false,
         }
     }
@@ -127,7 +127,12 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                     && *arity == 0
                     && !*singular => text.push(c),
                 c => {
-                    tokens.push(Token(Lexeme::Ident(text.clone(), *scalar, *arity), range));
+                    tokens.push(Token(match text.as_str() {
+                            ":" => Lexeme::Colon,
+                            _ => Lexeme::Ident(text.clone(), *scalar, *arity),
+                        },
+                        range,
+                    ));
                     state = State::Default;
                     incr = false;
                 },
@@ -168,27 +173,25 @@ mod tests {
         assert_eq!(
             lex("'''test"),
             Ok(vec![
-                Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 1), 1)),
-                Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 2), 1)),
-                Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 3), 1)),
-                Token(Lexeme::Ident("test".to_string(), 0), SrcRange::new(SrcLoc::new(1, 4), 4)),
+                Token(Lexeme::Ident("'".to_string(), false, 2), SrcRange::new(SrcLoc::new(1, 1), 3)),
+                Token(Lexeme::Ident("test".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 4), 4)),
             ]),
         );
 
         assert_eq!(
             lex("foobar'''"),
             Ok(vec![
-                Token(Lexeme::Ident("foobar".to_string(), 3), SrcRange::new(SrcLoc::new(1, 1), 9)),
+                Token(Lexeme::Ident("foobar".to_string(), false, 3), SrcRange::new(SrcLoc::new(1, 1), 9)),
             ]),
         );
 
         assert_eq!(
             lex("test f00'''bar bleugh"),
             Ok(vec![
-                Token(Lexeme::Ident("test".to_string(), 0), SrcRange::new(SrcLoc::new(1, 1), 4)),
-                Token(Lexeme::Ident("f00".to_string(), 3), SrcRange::new(SrcLoc::new(1, 6), 6)),
-                Token(Lexeme::Ident("bar".to_string(), 0), SrcRange::new(SrcLoc::new(1, 12), 3)),
-                Token(Lexeme::Ident("bleugh".to_string(), 0), SrcRange::new(SrcLoc::new(1, 16), 6)),
+                Token(Lexeme::Ident("test".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 1), 4)),
+                Token(Lexeme::Ident("f00".to_string(), false, 3), SrcRange::new(SrcLoc::new(1, 6), 6)),
+                Token(Lexeme::Ident("bar".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 12), 3)),
+                Token(Lexeme::Ident("bleugh".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 16), 6)),
             ]),
         );
     }
@@ -198,17 +201,17 @@ mod tests {
         assert_eq!(
             lex("[,];|(' '){}["),
             Ok(vec![
-                Token(Lexeme::Ident("[".to_string(), 0), SrcRange::new(SrcLoc::new(1, 1), 1)),
-                Token(Lexeme::Ident(",".to_string(), 0), SrcRange::new(SrcLoc::new(1, 2), 1)),
-                Token(Lexeme::Ident("]".to_string(), 0), SrcRange::new(SrcLoc::new(1, 3), 1)),
-                Token(Lexeme::Ident(";".to_string(), 0), SrcRange::new(SrcLoc::new(1, 4), 1)),
+                Token(Lexeme::Ident("[".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 1), 1)),
+                Token(Lexeme::Ident(",".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 2), 1)),
+                Token(Lexeme::Ident("]".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 3), 1)),
+                Token(Lexeme::Ident(";".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 4), 1)),
                 Token(Lexeme::Pipe, SrcRange::new(SrcLoc::new(1, 5), 1)),
-                Token(Lexeme::Ident("(".to_string(), 1), SrcRange::new(SrcLoc::new(1, 6), 2)),
-                Token(Lexeme::SingleQuote, SrcRange::new(SrcLoc::new(1, 9), 1)),
-                Token(Lexeme::Ident(")".to_string(), 0), SrcRange::new(SrcLoc::new(1, 10), 1)),
-                Token(Lexeme::Ident("{".to_string(), 0), SrcRange::new(SrcLoc::new(1, 11), 1)),
-                Token(Lexeme::Ident("}".to_string(), 0), SrcRange::new(SrcLoc::new(1, 12), 1)),
-                Token(Lexeme::Ident("[".to_string(), 0), SrcRange::new(SrcLoc::new(1, 13), 1)),
+                Token(Lexeme::Ident("(".to_string(), false, 1), SrcRange::new(SrcLoc::new(1, 6), 2)),
+                Token(Lexeme::Ident("'".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 9), 1)),
+                Token(Lexeme::Ident(")".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 10), 1)),
+                Token(Lexeme::Ident("{".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 11), 1)),
+                Token(Lexeme::Ident("}".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 12), 1)),
+                Token(Lexeme::Ident("[".to_string(), false, 0), SrcRange::new(SrcLoc::new(1, 13), 1)),
             ]),
         );
     }

@@ -18,12 +18,18 @@ pub struct Program {
 pub enum Expr {
     Value(Value),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Let(String, Box<Expr>, Box<Expr>),
+    Let(Decl, Box<Expr>, Box<Expr>),
     UnaryOp(UnaryOp, Box<Expr>),
     BinaryOp(BinaryOp, Box<Expr>, Box<Expr>),
     CallGlobal(String, Vec<Expr>),
     CallLocal(String, Vec<Expr>),
     CallExpr(Box<Expr>, Vec<Expr>),
+}
+
+#[derive(Clone, Debug)]
+pub enum Decl {
+    Single(String),
+    Destructure(Vec<String>),
 }
 
 #[derive(Clone, Debug)]
@@ -33,7 +39,7 @@ pub enum Value {
     Num(f64),
     Char(char),
     List(Vec<Value>),
-    Func(String, Box<Expr>),
+    Func(Decl, Box<Expr>),
     Universe,
 }
 
@@ -93,8 +99,8 @@ impl Expr {
 
     fn replace_local(&mut self, local: &str, new_local: &Expr) {
         if match self {
-            Expr::Let(name, _, _) if name == local => false, // TODO: Replace first expr!
-            Expr::Value(Value::Func(param, _)) if param == local => false,
+            Expr::Let(decl, _, _) if decl.contains(local) => false, // TODO: Replace first expr!
+            Expr::Value(Value::Func(decl, _)) if decl.contains(local) => false,
             Expr::CallLocal(name, args) if name == local => {
                 let mut tmp_args = Vec::new();
                 mem::swap(args, &mut tmp_args);
@@ -104,6 +110,15 @@ impl Expr {
             _ => true,
         } {
             self.visit_child_exprs(|expr| expr.replace_local(local, new_local));
+        }
+    }
+}
+
+impl Decl {
+    pub fn contains(&self, name: &str) -> bool {
+        match self {
+            Decl::Single(ident) => name == ident,
+            Decl::Destructure(idents) => idents.iter().any(|ident| ident == name),
         }
     }
 }

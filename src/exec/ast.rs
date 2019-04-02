@@ -15,6 +15,7 @@ use crate::{
         ast::{
             Program,
             Expr,
+            Decl,
             Literal,
             Builtin,
         },
@@ -31,7 +32,7 @@ pub enum Value<'a> {
         offset: usize,
         buf: Rc<Vec<Value<'a>>>,
     },
-    Func(HashMap<&'a str, Value<'a>>, &'a str, &'a Expr),
+    Func(HashMap<&'a str, Value<'a>>, &'a Decl, &'a Expr),
     Universe(usize),
 }
 
@@ -252,9 +253,23 @@ impl<'a> Value<'a> {
     fn call(&self, prog: &'a Program, args: &[Value<'a>]) -> Self {
         if let Some(arg) = args.get(0) {
             match self {
-                Value::Func(locals, arg_name, body) => {
+                Value::Func(locals, decl, body) => {
                     let mut locals = locals.clone();
-                    locals.insert(arg_name, arg.clone());
+
+                    match decl {
+                        Decl::Single(name) => { locals.insert(name, arg.clone()); },
+                        Decl::Destructure(names) => match arg {
+                            Value::List { offset, buf } => if buf[*offset..].len() != names.len() {
+                                panic!("Cannot destructure list of incorrect length");
+                            } else {
+                                for (name, val) in names.iter().zip(buf[*offset..].into_iter()) {
+                                    locals.insert(name, val.clone());
+                                }
+                            },
+                            _ => panic!("Cannot destructure non-list!"),
+                        },
+                    }
+
                     eval(body, prog, &args[1..], &locals)
                 },
                 _ => panic!("Too many arguments!"),
@@ -285,9 +300,13 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
     match expr {
         Expr::Literal(lit) => match lit {
             Literal::Num(x) => Value::Num(*x),
-            Literal::Str(s) => Value::List {
-                offset: 0,
-                buf: Rc::new(s.chars().map(|c| Value::Char(c)).collect()),
+            Literal::Str(s) => if s.len() == 1 {
+                Value::Char(s.chars().next().unwrap())
+            } else {
+                Value::List {
+                    offset: 0,
+                    buf: Rc::new(s.chars().map(|c| Value::Char(c)).collect()),
+                }
             },
             Literal::Bool(b) => Value::Bool(*b),
             Literal::Null => Value::Null,
@@ -297,25 +316,25 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
         } else {
             eval(false_expr, prog, args, locals)
         },
-        Expr::Let(name, expr, then) => {
+        Expr::Let(decl, expr, then) => {
             let val = eval(expr, prog, args, locals);
             let mut locals = locals.clone();
-            locals.insert(name, val);
-            eval(then, prog, args, &locals)
-        },
-        Expr::LetDestructure(names, expr, then) => {
-            match eval(expr, prog, args, locals) {
-                Value::List { offset, buf } => if buf[offset..].len() != names.len() {
-                    panic!("Cannot destructure list of incorrect length");
-                } else {
-                    let mut locals = locals.clone();
-                    for (name, val) in names.iter().zip(buf[offset..].into_iter()) {
-                        locals.insert(name, val.clone());
-                    }
-                    eval(then, prog, args, &locals)
+
+            match decl {
+                Decl::Single(name) => { locals.insert(name, val); },
+                Decl::Destructure(names) => match val {
+                    Value::List { offset, buf } => if buf[offset..].len() != names.len() {
+                        panic!("Cannot destructure list of incorrect length");
+                    } else {
+                        for (name, val) in names.iter().zip(buf[offset..].into_iter()) {
+                            locals.insert(name, val.clone());
+                        }
+                    },
+                    _ => panic!("Cannot destructure non-list!"),
                 },
-                _ => panic!("Cannot destructure non-list!"),
             }
+
+            eval(then, prog, args, &locals)
         },
         Expr::Builtin(builtin) => match builtin.as_ref() {
             Builtin::Print(a, b) => eval(&a, prog, args, locals).print(eval(&b, prog, args, locals)),
@@ -359,13 +378,27 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
                 panic!("Could not find item '{}'", name);
             }
         },
-        Expr::Closure(name, body) => match args.get(0) {
+        Expr::Closure(decl, body) => match args.get(0) {
             Some(arg) => {
                 let mut locals = locals.clone();
-                locals.insert(name, arg.clone());
+
+                match decl {
+                    Decl::Single(name) => { locals.insert(name, arg.clone()); },
+                    Decl::Destructure(names) => match arg {
+                        Value::List { offset, buf } => if buf[*offset..].len() != names.len() {
+                            panic!("Cannot destructure list of incorrect length");
+                        } else {
+                            for (name, val) in names.iter().zip(buf[*offset..].into_iter()) {
+                                locals.insert(name, val.clone());
+                            }
+                        },
+                        _ => panic!("Cannot destructure non-list!"),
+                    },
+                }
+
                 eval(body, prog, &args[1..], &locals)
             },
-            None => Value::Func(locals.clone(), name, body),
+            None => Value::Func(locals.clone(), decl, body),
         },
         _ => unimplemented!(),
     }

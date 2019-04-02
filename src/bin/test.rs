@@ -15,7 +15,7 @@ fn main() {
             __print @ msg
 
         def main |@|
-            __print @ "Hello, world!"
+            add 10 15
     "#;
 
     let hir = parse::code(code)

@@ -4,6 +4,7 @@ use super::{
     ast::{
         Program,
         Expr,
+        Decl,
         Literal,
         Builtin,
     },
@@ -32,12 +33,30 @@ fn read_params(tokens: &mut slice::Iter<Token>) -> Result<Vec<(String, usize)>, 
                 params.push((ident.clone(), *arity))
             },
             Token(Lexeme::Pipe, _) => return Ok(params),
-            Token(_, range) => return Err(Error::expected(Expected::ArityIdent).at(*range)),
+            Token(_, range) => return Err(Error::expected(Expected::Pipe).at(*range)),
         }
     }
 
     // We ran out of tokens, yet didn't find a trailing pipe!
     Err(Error::expected_delimiter('|'))
+}
+
+#[derive(Clone)]
+enum ParseDecl {
+    Single((String, usize)),
+    Destructure(Vec<(String, usize)>),
+}
+
+fn read_decl(tokens: &mut slice::Iter<Token>) -> Result<ParseDecl, Error> {
+    Ok(match tokens.clone().next() {
+        Some(Token(Lexeme::Pipe, _)) => ParseDecl::Destructure(read_params(tokens)?),
+        Some(Token(Lexeme::Ident(name, ident_scalar, ident_arity), _)) if !*ident_scalar => {
+            tokens.next();
+            ParseDecl::Single((name.clone(), *ident_arity))
+        },
+        Some(Token(_, range)) => return Err(Error::expected(Expected::ArityIdent).at(*range)),
+        _ => return Err(Error::expected(Expected::ArityIdent)),
+    })
 }
 
 const BUILTINS: [(&'static str, usize); 17] = [
@@ -140,7 +159,19 @@ fn read_expr(
         },
         Token(Lexeme::Ident(name, ident_scalar, ident_arity), range) => {
             tokens.next(); // Confirm reading ident
-            if let Some(arity) = get_ident_arity(name) {
+
+            if let Some(Token(Lexeme::Colon, _)) = tokens.clone().next() {
+                tokens.next(); // Confirm reading ':'
+
+                let mut body_locals = locals.clone();
+                body_locals.push((name.clone(), *ident_arity));
+
+                let body = read_expr(tokens, globals, &body_locals)?;
+                Expr::Closure(
+                    Decl::Single(name.clone()),
+                    Box::new(body),
+                )
+            } else if let Some(arity) = get_ident_arity(name) {
                 if *ident_arity != 0 {
                     return Err(Error::expected(Expected::NoArityIdent).at(*range));
                 } else if *ident_scalar {
@@ -164,20 +195,21 @@ fn read_expr(
         },
         Token(Lexeme::Pipe, range) => {
             let params = read_params(tokens)?;
-            if params.len() != 1 {
-                return Err(Error::one_param_only().at(*range));
-            } else {
-                let param = params.into_iter().next().unwrap();
 
-                let mut body_locals = locals.clone();
-                body_locals.push(param.clone());
-
-                let body = read_expr(tokens, globals, &body_locals)?;
-                Expr::Closure(
-                    param.0,
-                    Box::new(body),
-                )
+            match tokens.clone().next() {
+                Some(Token(Lexeme::Colon, _)) => { tokens.next(); },
+                Some(Token(_, range)) => return Err(Error::expected(Expected::Colon).at(*range)),
+                None => return Err(Error::expected(Expected::Colon)),
             }
+
+            let mut body_locals = locals.clone();
+            body_locals.append(&mut params.clone());
+
+            let body = read_expr(tokens, globals, &body_locals)?;
+            Expr::Closure(
+                Decl::Destructure(params.into_iter().map(|(ident, _)| ident).collect()),
+                Box::new(body),
+            )
         },
         Token(Lexeme::If, range) => {
             tokens.next(); // Confirm reading 'if'
@@ -191,42 +223,26 @@ fn read_expr(
         Token(Lexeme::Let, range) => {
             tokens.next(); // Confirm reading 'let'
 
-            let idents = match tokens.clone().next() {
-                Some(Token(Lexeme::Ident(name, scalar, arity), range)) => {
-                    if *scalar {
-                        return Err(Error::expected(Expected::ArityIdent).at(*range));
-                    } else {
-                        tokens.next();
-                        vec![(name.clone(), *arity)]
-                    }
-                },
-                Some(Token(Lexeme::Pipe, range)) => read_params(tokens)?,
-                Some(Token(_, range)) => {
-                    return Err(Error::expected(Expected::ArityIdent).at(*range));
-                },
-                None => {
-                    return Err(Error::unexpected_eof());
-                },
-            };
+            let decl = read_decl(tokens)?;
 
             let expr = read_expr(tokens, globals, locals)?;
 
             let mut then_locals = locals.clone();
-            then_locals.append(&mut idents.clone());
 
-            if idents.len() == 1 {
-                Expr::Let(
-                    idents.into_iter().next().unwrap().0,
-                    Box::new(expr),
-                    Box::new(read_expr(tokens, globals, &then_locals)?),
-                )
-            } else {
-                Expr::LetDestructure(
-                    idents.into_iter().map(|(name, _)| name).collect(),
-                    Box::new(expr),
-                    Box::new(read_expr(tokens, globals, &then_locals)?),
-                )
+            match decl.clone() {
+                ParseDecl::Single(ident) => then_locals.push(ident),
+                ParseDecl::Destructure(mut idents) => then_locals.append(&mut idents),
             }
+
+            Expr::Let(
+                match decl {
+                    ParseDecl::Single((ident, _)) => Decl::Single(ident),
+                    ParseDecl::Destructure(idents) =>
+                        Decl::Destructure(idents.iter().cloned().map(|(ident, _)| ident).collect()),
+                },
+                Box::new(expr),
+                Box::new(read_expr(tokens, globals, &then_locals)?),
+            )
         },
         Token(Lexeme::Def, range) => {
             tokens.next(); // Confirm reading 'def'

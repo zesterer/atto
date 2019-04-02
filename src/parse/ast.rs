@@ -13,11 +13,16 @@ pub struct Program {
 pub enum Expr {
     Literal(Literal),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Let(String, Box<Expr>, Box<Expr>),
-    LetDestructure(Vec<String>, Box<Expr>, Box<Expr>),
+    Let(Decl, Box<Expr>, Box<Expr>),
     Builtin(Box<Builtin>),
     Call(String, Vec<Expr>), // Includes things that have an arity of zero!
-    Closure(String, Box<Expr>),
+    Closure(Decl, Box<Expr>),
+}
+
+#[derive(Debug)]
+pub enum Decl {
+    Single(String),
+    Destructure(Vec<String>),
 }
 
 #[derive(Debug)]
@@ -72,11 +77,11 @@ impl Expr {
                 Box::new(b.to_hir(&names)),
                 Box::new(c.to_hir(&names)),
             ),
-            Expr::Let(name, expr, body) => {
+            Expr::Let(decl, expr, body) => {
                 let expr_hir = expr.to_hir(names);
                 let mut names = names.clone();
-                names.push((name.as_str(), false));
-                hir::Expr::Let(name.clone(), Box::new(expr_hir), Box::new(body.to_hir(&names)))
+                names.append(&mut decl.get_idents().into_iter().map(|ident| (ident, false)).collect());
+                hir::Expr::Let(decl.to_hir(), Box::new(expr_hir), Box::new(body.to_hir(&names)))
             },
             Expr::Builtin(builtin) => builtin.to_hir(names),
             Expr::Call(name, exprs) => {
@@ -86,12 +91,28 @@ impl Expr {
                     hir::Expr::CallLocal(name.clone(), exprs.iter().map(|expr| expr.to_hir(names)).collect())
                 }
             },
-            Expr::Closure(param, expr) => {
+            Expr::Closure(decl, expr) => {
                 let mut names = names.clone();
-                names.push((param.as_str(), false));
-                hir::Expr::Value(hir::Value::Func(param.clone(), Box::new(expr.to_hir(&names))))
+                names.append(&mut decl.get_idents().into_iter().map(|ident| (ident, false)).collect());
+                hir::Expr::Value(hir::Value::Func(decl.to_hir(), Box::new(expr.to_hir(&names))))
             },
             expr => unimplemented!("{:?}", expr),
+        }
+    }
+}
+
+impl Decl {
+    pub fn to_hir(&self) -> hir::Decl {
+        match self {
+            Decl::Single(ident) => hir::Decl::Single(ident.clone()),
+            Decl::Destructure(idents) => hir::Decl::Destructure(idents.iter().cloned().collect()),
+        }
+    }
+
+    pub fn get_idents(&self) -> Vec<&str> {
+        match self {
+            Decl::Single(one) => vec![one],
+            Decl::Destructure(many) => many.iter().map(|ident| ident.as_str()).collect(),
         }
     }
 }

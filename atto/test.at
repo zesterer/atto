@@ -1,0 +1,22 @@
+def factorial' |x|
+	if = 0 x
+		1
+	* x factorial - x 1
+
+def remove_char'' |c| |str|
+	with ilist str
+		=> fold "" |text| |cc| if = c cc
+				text
+			cat text cc
+	done
+
+def main |@|
+	let list := with irange 0 10
+		=> map |x| + x 1
+		=> map $factorial
+		=> collect
+	done
+
+	let @ print @ list
+	let @ print @ remove_char "e" "hello, this is a test message!"
+	@

@@ -1,57 +1,57 @@
 def _ "ARITHMETIC OPERATORS"
 
-def +'' |x| |y|
+def +'' x: y:
 	__add x y
 
-def -'' |x| |y|
+def -'' x: y:
 	__sub x y
 
-def *'' |x| |y|
+def *'' x: y:
 	__mul x y
 
-def /'' |x| |y|
+def /'' x: y:
 	__div x y
 
-def %'' |x| |y|
+def %'' x: y:
 	__rem x y
 
-def floor' |x|
+def floor' x:
 	__floor x
 
-def ceil' |x|
+def ceil' x:
 	__ceil x
 
-def min'' |x| |y|
+def min'' x: y:
 	if < x y
 		x
 	y
 
-def max'' |x| |y|
+def max'' x: y:
 	if > x y
 		x
 	y
 
 def _ "COMPARISON OPERATORS"
 
-def ='' |x| |y|
+def ='' x: y:
 	__eq x y
 
-def !='' |x| |y|
+def !='' x: y:
 	! __eq x y
 
-def <'' |x| |y|
+def <'' x: y:
 	__less x y
 
-def >'' |x| |y|
+def >'' x: y:
 	__less y x
 
-def <='' |x| |y|
+def <='' x: y:
 	__lesseq x y
 
-def >='' |x| |y|
+def >='' x: y:
 	__lesseq y x
 
-def !' |x|
+def !' x:
 	if = true x
 		false
 	if = false x
@@ -60,57 +60,57 @@ def !' |x|
 
 def _ "LIST OPERATORS"
 
-def head' |l|
+def head' l:
 	__head l
 
-def tail' |l|
+def tail' l:
 	__tail l
 
-def wrap' |l|
+def wrap' l:
 	__wrap l
 
-def cat'' |a| |b|
+def cat'' a: b:
 	__cat a b
 
-def pair'' |a| |b|
+def pair'' a: b:
 	__cat __wrap a __wrap b
 
 def _ "IO"
 
-def print'' |@| |msg|
+def print'' @: msg:
 	__print @ msg
 
-def input' |@|
+def input' @:
 	__input @
 
 def _ "SYNTAX UTILITIES"
 
-def ''' |f'| |arg|
+def ''' f': arg:
 	f arg
 
 def _ "LIST UTILITIES"
 
-def ['' |items| |t|
+def ['' items: t:
 	__cat __wrap items t
 
-def ,'' |x| |y|
+def ,'' x: y:
 	__cat __wrap x y
 
 def ] empty
 
 def empty __tail __wrap null
 
-def len' |list|
+def len' list:
 	if = empty list
 		0
 	+ 1 len tail list
 
-def nth'' |n| |list|
+def nth'' n: list:
 	if = 0 n
 		head list
 	nth - n 1 tail list
 
-def split'' |n| |list|
+def split'' n: list:
 	if = 0 n
 		[empty, list]
 	let |h t| split - n 1 tail list
@@ -118,7 +118,7 @@ def split'' |n| |list|
 		cat head list h
 		t
 
-def flatten' |ll|
+def flatten' ll:
 	if = empty ll
 		empty
 	if = 1 len ll
@@ -127,80 +127,77 @@ def flatten' |ll|
 		head ll
 		flatten tail ll
 
-def rev' |list|
+def rev' list:
 	if = empty list
 		empty
 	cat (rev tail list) wrap head list
 
 def _ "NUMERICAL LIST OPERATIONS"
 
-def sort_cmp'' |n| |list|
+def sort_cmp'' n: list:
 	if = empty list
 		[empty, empty, empty]
-	let |lo mid hi| := sort_cmp n tail list
+	let |lo mid hi| sort_cmp n tail list
 	cmp head list n
-		|h| [cat [h] lo, mid, hi]
-		|h| [lo, cat [h] mid, hi]
-		|h| [lo, mid, cat [h] hi]
+		h: [cat [h] lo, mid, hi]
+		h: [lo, cat [h] mid, hi]
+		h: [lo, mid, cat [h] hi]
 
-def quicksort' |list|
+def quicksort' list:
 	if <= len list 1
 		list
-	let |lo mid hi| := sort_cmp
+	let |lo mid hi| sort_cmp
 		nth (floor / len list 2) list
 		list
 	flatten [quicksort lo, mid, quicksort hi]
 
 def _ "FLOW CONTROLS"
 
-def #'' |x| |y| y
+def #'' x: y: y
 
-def ('' |expr| |_|
+def ('' expr: _:
 	expr
 
 def ) null
 
-def cmp''''' |x| |y| |if_less'| |if_eq'| |if_greater'|
+def cmp''''' x: y: if_less': if_eq': if_greater':
 	if < x y
 		if_less x
 	if > x y
 		if_greater x
 	if_eq x
 
-def :=' |x|
-	x
-
 def _ "ITERATION"
 
-def ilist' |list|
-	[list, |payload| (
+def ilist' list:
+	[list, payload: (
 		if = empty payload
 			[null, empty]
 		[head payload, tail payload]
 	)]
 
-def irange'' |start| |end|
-	[start, |n| (
+def irange'' start: end:
+	[start, n: (
 		if = end n
 			[null, empty]
 		[n, + n 1]
 	)]
 
-def next' |iter|
+def next' iter:
 	let |payload f'| iter
 	head f payload
 
-def incr' |iter|
+def incr' iter:
 	let |payload f'| iter
 	[nth 1 (f payload), $f]
 
-def iskip'' |n| |iter|
+def iskip'' n: iter:
 	if = n 0
 		iter
 	iskip (- n 1) incr iter
 
-def fold'' |init| |f''|
-	|iter|
+def fold'' init: f'':
+	iter:
 		if = null next iter
 			init
 		let fold''' $fold
@@ -209,8 +206,8 @@ def fold'' |init| |f''|
 			$f
 			incr iter
 
-def reduce' |f''|
-	|iter|
+def reduce' f'':
+	iter:
 		if = null next iter
 			null
 		let fold''' $fold
@@ -219,7 +216,7 @@ def reduce' |f''|
 			$f
 			incr iter
 
-def with'' |iter| |ops|
+def with'' iter: ops:
 	if = empty ops
 		iter
 	let f' head ops
@@ -227,22 +224,22 @@ def with'' |iter| |ops|
 		f iter
 		tail ops
 
-def =>'' |op| |ops|
+def =>'' op: ops:
 	cat wrap op
 		ops
 
-def map' |f'|
-	|iter|
-		[iter, |payload| (
+def map' f':
+	iter:
+		[iter, payload: (
 			let iter payload
 			if = null next iter
 				null
 			[f next iter, incr iter]
 		)]
 
-def skip' |n|
-	|iter|
-		[iskip n iter, |payload| (
+def skip' n:
+	iter:
+		[iskip n iter, payload: (
 			let iter payload
 			if = null next iter
 				null
@@ -250,7 +247,7 @@ def skip' |n|
 		)]
 
 def collect
-	|iter|
+	iter:
 	if = null next iter
 		empty
 	cat wrap next iter
