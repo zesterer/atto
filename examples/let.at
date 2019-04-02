@@ -1,0 +1,13 @@
+fn factorial n is
+	if = n 0
+		1
+	else
+		* n factorial( - n 1)
+
+fn main is
+	# print factorial(4)
+	let hello "Hello"
+	let world ", world!"
+	let list [[1, 1.5], 2, [3, 3.5], [4, 5]]
+	# print + hello world
+	print list
