@@ -1,4 +1,4 @@
-def quicksort' list:
+def quicksort' list ->
 	if <= len list 1
 		list
 	let |lo mid hi| sort_cmp
@@ -6,7 +6,7 @@ def quicksort' list:
 		list
 	flatten [quicksort lo, mid, quicksort hi]
 
-def main @:
+def main @ ->
 	print @ rev quicksort [
 		45, 75, 98, 24, 10, 12, 60, 32, 17, 41,
 		36, 61, 30, 27, 42, 87, 83, 59, 11, 56,

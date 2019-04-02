@@ -1,4 +1,4 @@
-def add' |x y|: + x y
+def add' |x y| -> + x y
 
-def main @:
+def main @ ->
 	print @ add [5, 10]

@@ -1,8 +1,8 @@
-def main |@|
-	let num := with irange 1 10
+def main @ ->
+	let num with irange 1 10
 		=> skip 3
-		=> map |x| + x 5
-		=> map |x| * x 3
+		=> map x -> + x 5
+		=> map x -> * x 3
 		=> reduce $max
 	done
 	let @ print @ "The meaning of life is..."

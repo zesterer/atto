@@ -1,4 +1,4 @@
-def main' |@|
+def main' @ ->
 	let @ print @ min 10 5
 	let @ print @ max 7 3
 	let @ print @ list_min [4, 3, 7, 15]

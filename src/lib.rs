@@ -109,7 +109,7 @@ pub enum Expected {
     Pipe,
     Def,
     CloseParen,
-    Colon,
+    Arrow,
 }
 
 #[derive(Debug, PartialEq)]

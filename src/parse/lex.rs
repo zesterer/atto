@@ -14,7 +14,7 @@ pub enum Lexeme {
     Null,
     Pipe,
     Dollar,
-    Colon,
+    Arrow,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -32,7 +32,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
 
     fn is_singular(c: char) -> bool {
         match c {
-            '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' | ':' => true,
+            '|' | '(' | ')' | '[' | ']' | '{' | '}' | '\'' | ',' | ';' => true,
             _ => false,
         }
     }
@@ -128,7 +128,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                     && !*singular => text.push(c),
                 c => {
                     tokens.push(Token(match text.as_str() {
-                            ":" => Lexeme::Colon,
+                            "->" => Lexeme::Arrow,
                             _ => Lexeme::Ident(text.clone(), *scalar, *arity),
                         },
                         range,

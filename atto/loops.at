@@ -1,5 +1,5 @@
-def main' |@|
+def main' @ ->
 	let @ for range 0 10 @
-		|@| |i| print @ i
+		@ -> i -> print @ i
 	let @ for iter ["foo", "bar", "foobar"] @
-		|@| |i| print @ i
+		@ -> i-> print @ i

@@ -160,7 +160,7 @@ fn read_expr(
         Token(Lexeme::Ident(name, ident_scalar, ident_arity), range) => {
             tokens.next(); // Confirm reading ident
 
-            if let Some(Token(Lexeme::Colon, _)) = tokens.clone().next() {
+            if let Some(Token(Lexeme::Arrow, _)) = tokens.clone().next() {
                 tokens.next(); // Confirm reading ':'
 
                 let mut body_locals = locals.clone();
@@ -197,9 +197,9 @@ fn read_expr(
             let params = read_params(tokens)?;
 
             match tokens.clone().next() {
-                Some(Token(Lexeme::Colon, _)) => { tokens.next(); },
-                Some(Token(_, range)) => return Err(Error::expected(Expected::Colon).at(*range)),
-                None => return Err(Error::expected(Expected::Colon)),
+                Some(Token(Lexeme::Arrow, _)) => { tokens.next(); },
+                Some(Token(_, range)) => return Err(Error::expected(Expected::Arrow).at(*range)),
+                None => return Err(Error::expected(Expected::Arrow)),
             }
 
             let mut body_locals = locals.clone();
