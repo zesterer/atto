@@ -1,5 +1,0 @@
-def add'' |x| |y|
-	+ x y
-
-def main ||
-	print add 5 10

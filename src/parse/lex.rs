@@ -89,6 +89,15 @@ pub fn lex(code: &str) -> Result<Vec<Token>, Vec<Error>> {
                     state = State::Default;
                 },
                 '\0' => break,
+                c if *escaped => {
+                    match c {
+                        '\\' => text.push('\\'),
+                        'n' => text.push('\n'),
+                        _ => {},
+                    }
+                    *escaped = false;
+                },
+                '\\' => *escaped = true,
                 c => text.push(c),
             },
             State::Ident(text, scalar, arity) => match c {

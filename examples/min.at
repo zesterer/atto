@@ -1,0 +1,6 @@
+def main' @ ->
+	let @ print @ min 10 5
+	let @ print @ max 7 3
+	let @ print @ list_min [4, 3, 7, 15]
+	let @ print @ list_max [11, 2, 4, 6]
+	done

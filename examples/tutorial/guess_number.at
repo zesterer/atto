@@ -1,0 +1,21 @@
+def random_number
+	# "Chosen by a fair dice roll."
+	# "Guaranteed to be random."
+	"4"
+
+def guess_number''' @ -> n -> lives_left ->
+	if = 0 lives_left
+		[@, false]
+	let |@ guess| := input @
+	let @ := print @ cat "You guessed " cat strip guess "!"
+	if = strip guess wrap n
+		[@, true]
+	let @ := print @ "Sorry! Incorrect!"
+	guess_number @ n - lives_left 1
+
+def main' @ ->
+	let |@ won_game| := guess_number @ random_number 10
+	let @ := if won_game
+		print @ "Correct! You win"
+	print @ "You ran out of lives! You lose!"
+	@

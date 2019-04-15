@@ -281,7 +281,7 @@ impl<'a> Value<'a> {
 }
 
 pub fn exec(code: &str) -> Result<(), Vec<Error>> {
-    let mut src = String::from(include_str!("../../atto/core.at"));
+    let mut src = String::from(include_str!("../atto/core.at"));
     src += code;
     run_prog(&parse::code(&src)?).map_err(|err| vec![err])?;
     Ok(())

@@ -5,16 +5,16 @@ use atto::{
 
 fn main() {
     let code = r#"
-        def +'' |x| |y|
+        def +'' x -> y ->
             __add x y
 
-        def add'' |a| |b|
+        def add'' a -> b ->
             + a b
 
-        def print'' |@| |msg|
+        def print'' @ -> msg ->
             __print @ msg
 
-        def main |@|
+        def main @ ->
             add 10 15
     "#;
 
