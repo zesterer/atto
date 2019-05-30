@@ -1,0 +1,19 @@
+fn print-list l is
+    if = null head l
+        print ""
+    @ print head l
+    print-list tail l
+
+fn bottles n is 
+    if = 0 n
+        null
+        @ print-list 
+            fuse + str n " bottles of beer on the wall"
+            fuse + str n " bottles of beer"
+            fuse "take one down, turn them around"
+                if = 1 n 
+                    "No more bottles of beer on the wall"    
+                + str - n 1 " bottles of beer on the wall"
+        bottles - n 1
+
+fn main is bottles 99
