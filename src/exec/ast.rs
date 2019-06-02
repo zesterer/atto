@@ -83,7 +83,7 @@ impl<'a> Value<'a> {
                     ]),
                 }
             },
-            _ => panic!("Invalid universe value!"),
+            val => panic!("Invalid universe value: {:?}", val),
         }
     }
 
@@ -93,7 +93,7 @@ impl<'a> Value<'a> {
                 println!("{}", other.to_str());
                 Value::Universe((a + 1).into())
             },
-            _ => panic!("Invalid universe value!"),
+            val => panic!("Invalid universe value: {:?}", val),
         }
     }
 
@@ -283,7 +283,7 @@ impl<'a> Value<'a> {
 pub fn exec(code: &str) -> Result<(), Vec<Error>> {
     let mut src = String::from(include_str!("../atto/core.at"));
     src += code;
-    run_prog(&parse::code(&src)?).map_err(|err| vec![err])?;
+    println!("{:?}", run_prog(&parse::code(&src)?).map_err(|err| vec![err])?);
     Ok(())
 }
 
@@ -368,11 +368,13 @@ fn eval<'a>(expr: &'a Expr, prog: &'a Program, args: &[Value<'a>], locals: &Hash
                 .iter()
                 .map(|expr| eval(expr, prog, args, locals))
                 .collect();
-            call_args.extend_from_slice(args);
+
+            //println!("{:?}", call_args);
 
             if let Some(local) = locals.get(name.as_str()) {
                 local.call(prog, &call_args)
             } else if let Some(global) = prog.globals.get(name) {
+                call_args.extend_from_slice(args);
                 eval(global, prog, &call_args, &HashMap::new())
             } else {
                 panic!("Could not find item '{}'", name);

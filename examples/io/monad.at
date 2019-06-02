@@ -1,0 +1,27 @@
+def write' msg ->
+    u -> print u msg
+
+def read' f'' ->
+    u ->
+        let |u v| input u
+        f v u
+
+def >>='' f' -> g' ->
+    u -> g f u
+
+def count_to' n ->
+    if = n 1
+        write 1
+    >>= count_to - n 1
+        write n
+
+def my_main
+    >>= write "Hello"
+    >>= read v ->
+            write cat "You said " v
+    >>= write "Counting now"
+        count_to 10
+
+def main @ ->
+    let f' my_main
+    f @
