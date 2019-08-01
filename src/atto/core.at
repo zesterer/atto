@@ -199,3 +199,15 @@ fn split x l is
 		pair empty l
 	pair fuse head l head split - x 1 tail l
 		 head tail split - x 1 tail l
+
+fn > x y is
+	= "-" nth 0 nth 0 split 1 str - y x
+
+fn < x y is
+	= "-" nth 0 nth 0 split 1 str - x y
+
+fn >= x y is
+	! < x y
+
+fn <= x y is
+	! > x y
