@@ -74,14 +74,6 @@ fn @ x y is
 	# "Evaluate to only the first argument"
 	# y x
 
-fn ! x is
-	# "Negate a boolean value"
-	if = true x
-		false
-	if = false x
-		true
-	x
-
 fn wrap x is
 	# "Wrap a value in a list"
 	tail pair null x
