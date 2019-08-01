@@ -199,15 +199,28 @@ fn split x l is
 		pair empty l
 	pair fuse head l head split - x 1 tail l
 		 head tail split - x 1 tail l
+fn is_neg x is
+	# "Determine if number is negative"
+	if if_num x
+		= "-" nth 0 nth 0 split 1 str x
+	x
 
 fn > x y is
-	= "-" nth 0 nth 0 split 1 str - y x
+	if and if_num x if_num y
+		is_neg - y x
+	false
 
 fn < x y is
-	= "-" nth 0 nth 0 split 1 str - x y
+	if and if_num x if_num y
+		is_neg - x y
+	false
 
 fn >= x y is
-	! < x y
+	if and if_num x if_num y
+		! < x y
+	false
 
 fn <= x y is
-	! > x y
+	if and if_num x if_num y
+		! > x y
+	false
