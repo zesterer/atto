@@ -143,7 +143,7 @@ fn is_null x is
 		true
 	false
 
-fn if_num x is
+fn is_num x is
 	# "Determine whether a value is a number"
 	if = 0 * x 0
 		true
@@ -191,3 +191,29 @@ fn split x l is
 		pair empty l
 	pair fuse head l head split - x 1 tail l
 		 head tail split - x 1 tail l
+		 
+fn is_neg x is
+	# "Determine if number is negative"
+	if is_num x
+		= "-" nth 0 nth 0 split 1 str x
+	x
+
+fn > x y is
+	if and is_num x is_num y
+		is_neg - y x
+	false
+
+fn < x y is
+	if and is_num x is_num y
+		is_neg - x y
+	false
+
+fn >= x y is
+	if and is_num x is_num y
+		! < x y
+	false
+
+fn <= x y is
+	if and is_num x is_num y
+		! > x y
+	false
